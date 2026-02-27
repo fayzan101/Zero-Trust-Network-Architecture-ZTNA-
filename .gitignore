@@ -1,0 +1,25 @@
+# Java
+/target
+*.class
+*.jar
+*.war
+*.iml
+/.idea
+/.classpath
+/.project
+/.settings
+
+# Node
+/node_modules
+/dist
+/.env
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+**/db_data
