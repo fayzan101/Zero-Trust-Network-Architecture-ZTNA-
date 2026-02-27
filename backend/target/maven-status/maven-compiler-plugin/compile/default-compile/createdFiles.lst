@@ -1,1 +1,14 @@
+com\yourname\zerotrust\dto\GenericResponse.class
+com\yourname\zerotrust\dto\RegisterRequest.class
+com\yourname\zerotrust\dto\RefreshRequest.class
+com\yourname\zerotrust\dto\RegisterResponse.class
+com\yourname\zerotrust\service\AuthService.class
+com\yourname\zerotrust\dto\MfaRequest.class
+com\yourname\zerotrust\dto\LogoutRequest.class
+com\yourname\zerotrust\dto\ProfileResponse.class
+com\yourname\zerotrust\dto\LoginRequest.class
+com\yourname\zerotrust\service\impl\AuthServiceImpl.class
+com\yourname\zerotrust\dto\MfaResponse.class
+com\yourname\zerotrust\dto\LoginResponse.class
 com\yourname\zerotrust\ZerotrustApplication.class
+com\yourname\zerotrust\controller\AuthController.class
