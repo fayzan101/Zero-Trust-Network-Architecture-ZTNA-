@@ -21,12 +21,12 @@
 | ------ | ----------------- | -------------- |
 | POST   | /api/users        | Create user    |
 | GET    | /api/users        | List users     |
-| GET    | /api/users/{id}   | Get user       |
-| PUT    | /api/users/{id}   | Update user    |
-| DELETE | /api/users/{id}   | Delete user    |
+| GET    | /api/users        | Get user (by id in body) |
+| PUT    | /api/users        | Update user (id in body) |
+| DELETE | /api/users        | Delete user (id in body) |
 | POST   | /api/roles        | Create role    |
 | GET    | /api/roles        | List roles     |
-| PUT    | /api/roles/{id}   | Update role    |
+| PUT    | /api/roles        | Update role (id in body) |
 
 ---
 
