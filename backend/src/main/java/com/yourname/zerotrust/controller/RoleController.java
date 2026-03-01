@@ -1,12 +1,9 @@
 package com.yourname.zerotrust.controller;
-
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-// import removed: PathVariable
-import com.yourname.zerotrust.dto.UpdateRoleRequest;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -14,9 +11,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.yourname.zerotrust.dto.GenericResponse;
+import com.yourname.zerotrust.dto.UpdateRoleRequest;
 import com.yourname.zerotrust.entity.Role;
 import com.yourname.zerotrust.service.RoleService;
-
 @RestController
 @RequestMapping("/api/roles")
 public class RoleController {
@@ -25,7 +22,11 @@ public class RoleController {
 
     @PostMapping
     public ResponseEntity<GenericResponse> createRole(@RequestBody Role role) {
-        return ResponseEntity.ok(roleService.createRole(role));
+        GenericResponse response = roleService.createRole(role);
+        if (response.getMessage().startsWith("Error:")) {
+            return ResponseEntity.badRequest().body(response);
+        }
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping
@@ -35,6 +36,10 @@ public class RoleController {
 
     @PutMapping
     public ResponseEntity<GenericResponse> updateRole(@RequestBody UpdateRoleRequest updateRoleRequest) {
-        return ResponseEntity.ok(roleService.updateRole(updateRoleRequest.getId(), updateRoleRequest.getRole()));
+        GenericResponse response = roleService.updateRole(updateRoleRequest.getId(), updateRoleRequest.getRole());
+        if (response.getMessage().startsWith("Error:")) {
+            return ResponseEntity.badRequest().body(response);
+        }
+        return ResponseEntity.ok(response);
     }
 }

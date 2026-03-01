@@ -1,6 +1,6 @@
 # Spring Boot application configuration
 datasource:
-  url: jdbc:postgresql://localhost:5432/zerotrustdb
+  url: jdbc:postgresql://localhost:5433/zerotrustdb
   username: postgres
   password: password
   driver-class-name: org.postgresql.Driver
@@ -9,11 +9,15 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+    defer-datasource-initialization: true
   datasource:
-    url: jdbc:postgresql://localhost:5432/zerotrustdb
+    url: jdbc:postgresql://localhost:5433/zerotrustdb
     username: postgres
     password: password
     driver-class-name: org.postgresql.Driver
+  sql:
+    init:
+      mode: always
   main:
     allow-bean-definition-overriding: true
 jwt:
