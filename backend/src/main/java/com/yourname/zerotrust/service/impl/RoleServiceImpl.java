@@ -17,8 +17,12 @@ public class RoleServiceImpl implements RoleService {
 
     @Override
     public GenericResponse createRole(Role role) {
+        // Check for duplicate role name
+        if (roleRepository.existsByName(role.getName())) {
+            return new GenericResponse("Error: Role already exists");
+        }
         roleRepository.save(role);
-        return new GenericResponse("Role created");
+        return new GenericResponse("Role created successfully");
     }
 
     @Override
@@ -28,8 +32,20 @@ public class RoleServiceImpl implements RoleService {
 
     @Override
     public GenericResponse updateRole(Long id, Role role) {
-        role.setId(id);
-        roleRepository.save(role);
-        return new GenericResponse("Role updated");
+        Role existingRole = roleRepository.findById(id).orElse(null);
+        if (existingRole == null) {
+            return new GenericResponse("Error: Role not found");
+        }
+
+        // Check for duplicate name (if changed)
+        if (role.getName() != null && !role.getName().equals(existingRole.getName())) {
+            if (roleRepository.existsByName(role.getName())) {
+                return new GenericResponse("Error: Role name already exists");
+            }
+            existingRole.setName(role.getName());
+        }
+
+        roleRepository.save(existingRole);
+        return new GenericResponse("Role updated successfully");
     }
 }

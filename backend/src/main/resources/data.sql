@@ -1,1 +1,3 @@
--- Optional seed data
+-- Seed roles
+INSERT INTO roles (name) VALUES ('USER') ON CONFLICT DO NOTHING;
+INSERT INTO roles (name) VALUES ('ADMIN') ON CONFLICT DO NOTHING;
