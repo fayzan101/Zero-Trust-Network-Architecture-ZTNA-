@@ -9,4 +9,5 @@ import com.yourname.zerotrust.entity.Policy;
 public interface PolicyRepository extends JpaRepository<Policy, Long> {
     List<Policy> findByEnabledTrue();
     List<Policy> findByResourceAndActionAndEnabledTrue(String resource, String action);
+    long countByEnabledTrue();
 }

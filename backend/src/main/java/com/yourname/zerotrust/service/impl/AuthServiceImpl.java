@@ -40,6 +40,7 @@ import com.yourname.zerotrust.service.AuthService;
 import com.yourname.zerotrust.service.RiskService;
 import com.yourname.zerotrust.service.SessionService;
 import com.yourname.zerotrust.util.JwtUtil;
+import com.yourname.zerotrust.util.TokenHashUtil;
 import com.yourname.zerotrust.util.TotpUtil;
 
 @Service
@@ -70,6 +71,9 @@ public class AuthServiceImpl implements AuthService {
 
     @Autowired
     private TotpUtil totpUtil;
+
+    @Autowired
+    private TokenHashUtil tokenHashUtil;
 
     @Override
     public RegisterResponse register(RegisterRequest request) {
@@ -278,7 +282,7 @@ public class AuthServiceImpl implements AuthService {
         String accessToken = jwtUtil.generateAccessToken(user.getUsername());
         String refreshToken = jwtUtil.generateRefreshToken(user.getUsername());
 
-        user.setRefreshToken(refreshToken);
+        user.setRefreshToken(tokenHashUtil.hash(refreshToken));
         user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
 
@@ -297,7 +301,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public GenericResponse logout(LogoutRequest request) {
-        User user = userRepository.findByRefreshToken(request.getRefreshToken()).orElse(null);
+        User user = userRepository.findByRefreshToken(tokenHashUtil.hash(request.getRefreshToken())).orElse(null);
         if (user != null) {
             sessionService.terminateSessionsForUser(user.getId(), "User logout");
             user.setRefreshToken(null);
@@ -315,7 +319,7 @@ public class AuthServiceImpl implements AuthService {
             throw new UnauthorizedException("Invalid or expired refresh token");
         }
 
-        User user = userRepository.findByRefreshToken(request.getRefreshToken()).orElse(null);
+        User user = userRepository.findByRefreshToken(tokenHashUtil.hash(request.getRefreshToken())).orElse(null);
         if (user == null) {
             throw new UnauthorizedException("Refresh token not found");
         }
@@ -323,7 +327,7 @@ public class AuthServiceImpl implements AuthService {
         String accessToken = jwtUtil.generateAccessToken(user.getUsername());
         String newRefreshToken = jwtUtil.generateRefreshToken(user.getUsername());
 
-        user.setRefreshToken(newRefreshToken);
+        user.setRefreshToken(tokenHashUtil.hash(newRefreshToken));
         userRepository.save(user);
 
         auditLogService.logInfo("TOKEN_REFRESH", user.getId(), user.getUsername(),

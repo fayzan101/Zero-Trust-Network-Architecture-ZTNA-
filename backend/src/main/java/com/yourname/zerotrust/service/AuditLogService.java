@@ -12,4 +12,5 @@ public interface AuditLogService {
     List<AuditLogResponse> getAllLogs();
     List<AuditLogResponse> getLogsByEventType(String eventType);
     List<AuditLogResponse> getLogsByUsername(String username);
+    List<AuditLogResponse> getLogsBySeverity(String severity);
 }

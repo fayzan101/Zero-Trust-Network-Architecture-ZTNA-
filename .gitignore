@@ -23,3 +23,7 @@ Thumbs.db
 
 # Docker
 **/db_data
+
+# Secrets
+**/.env
+!**/.env.example

@@ -1,6 +1,9 @@
 package com.yourname.zerotrust.dto;
 
+import jakarta.validation.constraints.NotNull;
+
 public class PrivilegeEscalationRequest {
+    @NotNull
     private Long userId;
     private String targetRole;
     private String resource;

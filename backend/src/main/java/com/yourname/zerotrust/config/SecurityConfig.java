@@ -12,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import com.yourname.zerotrust.security.AuthRateLimitFilter;
 import com.yourname.zerotrust.security.JwtAccessDeniedHandler;
 import com.yourname.zerotrust.security.JwtAuthenticationEntryPoint;
 import com.yourname.zerotrust.security.JwtAuthenticationFilter;
@@ -28,6 +29,9 @@ public class SecurityConfig {
 
     @Autowired
     private JwtAccessDeniedHandler accessDeniedHandler;
+
+    @Autowired
+    private AuthRateLimitFilter authRateLimitFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -48,6 +52,7 @@ public class SecurityConfig {
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 .anyRequest().authenticated()
             )
+            .addFilterBefore(authRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }

@@ -3,258 +3,505 @@
     "_postman_id": "ztna-simulator-collection",
     "name": "ZTNA Simulator API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Postman collection for ZTNA Simulator Auth APIs."
+    "description": "Full Postman collection for ZTNA Simulator — auth, users, roles, devices, risk, policies, MFA, monitoring, attacks, logs, metrics."
   },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8080" },
+    { "key": "access_token", "value": "" },
+    { "key": "refresh_token", "value": "" }
+  ],
   "item": [
     {
-      "name": "Auth - Register",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"username\": \"testuser\",\n  \"email\": \"test@example.com\",\n  \"password\": \"TestPassword123!\",\n  \"role\": \"USER\"\n}"
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"testuser\",\n  \"email\": \"test@example.com\",\n  \"password\": \"TestPassword123!\",\n  \"role\": \"USER\"\n}" },
+            "url": "{{base_url}}/api/auth/register"
+          }
         },
-        "url": {
-          "raw": "{{base_url}}/api/auth/register",
-          "host": ["{{base_url}}"],
-          "path": ["api", "auth", "register"]
-        }
-      }
-    },
-    {
-      "name": "Auth - Login",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"username\": \"testuser\",\n  \"password\": \"TestPassword123!\"\n}"
+        {
+          "name": "Login (admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"Admin123!\"\n}" },
+            "url": "{{base_url}}/api/auth/login"
+          }
         },
-        "url": {
-          "raw": "{{base_url}}/api/auth/login",
-          "host": ["{{base_url}}"],
-          "path": ["api", "auth", "login"]
-        }
-      }
-    },
-    {
-      "name": "Auth - MFA",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"username\": \"testuser\",\n  \"otp\": \"123456\"\n}"
+        {
+          "name": "Login (demo)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"demo\",\n  \"password\": \"Demo123!\"\n}" },
+            "url": "{{base_url}}/api/auth/login"
+          }
         },
-        "url": {
-          "raw": "{{base_url}}/api/auth/mfa",
-          "host": ["{{base_url}}"],
-          "path": ["api", "auth", "mfa"]
-        }
-      }
-    },
-    {
-      "name": "Auth - Logout",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"refreshToken\": \"<refresh_token>\"\n}"
+        {
+          "name": "MFA Verify",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"admin\",\n  \"otp\": \"123456\"\n}" },
+            "url": "{{base_url}}/api/auth/mfa"
+          }
         },
-        "url": {
-          "raw": "{{base_url}}/api/auth/logout",
-          "host": ["{{base_url}}"],
-          "path": ["api", "auth", "logout"]
-        }
-      }
-    },
-    {
-      "name": "Auth - Refresh Token",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"refreshToken\": \"<refresh_token>\"\n}"
+        {
+          "name": "MFA Setup",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/api/auth/mfa/setup"
+          }
         },
-        "url": {
-          "raw": "{{base_url}}/api/auth/refresh",
-          "host": ["{{base_url}}"],
-          "path": ["api", "auth", "refresh"]
-        }
-      }
-    },
-    {
-      "name": "Auth - Profile",
-      "request": {
-        "method": "GET",
-        "header": [
-          { "key": "Authorization", "value": "Bearer <access_token>" }
-        ],
-        "url": {
-          "raw": "{{base_url}}/api/auth/profile",
-          "host": ["{{base_url}}"],
-          "path": ["api", "auth", "profile"]
-        }
-      }
-    }
-  ,
-    {
-      "name": "User - Create",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"username\": \"newuser\",\n  \"email\": \"newuser@example.com\",\n  \"password\": \"Password123!\",\n  \"role\": \"USER\"\n}"
+        {
+          "name": "MFA Enable",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"otp\": \"123456\"\n}" },
+            "url": "{{base_url}}/api/auth/mfa/enable"
+          }
         },
-        "url": {
-          "raw": "{{base_url}}/api/users",
-          "host": ["{{base_url}}"],
-          "path": ["api", "users"]
-        }
-      }
-    },
-    {
-      "name": "User - List",
-      "request": {
-        "method": "GET",
-        "header": [
-          { "key": "Authorization", "value": "Bearer <access_token>" }
-        ],
-        "url": {
-          "raw": "{{base_url}}/api/users",
-          "host": ["{{base_url}}"],
-          "path": ["api", "users"]
-        }
-      }
-    },
-    {
-      "name": "User - Get",
-      "request": {
-        "method": "GET",
-        "header": [
-          { "key": "Authorization", "value": "Bearer <access_token>" },
-          { "key": "Content-Type", "value": "application/json" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"id\": 1\n}"
+        {
+          "name": "MFA Disable",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"password\": \"Admin123!\",\n  \"otp\": \"123456\"\n}" },
+            "url": "{{base_url}}/api/auth/mfa/disable"
+          }
         },
-        "url": {
-          "raw": "{{base_url}}/api/users/get",
-          "host": ["{{base_url}}"],
-          "path": ["api", "users", "get"]
-        }
-      }
-    },
-    {
-      "name": "User - Update",
-      "request": {
-        "method": "PUT",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" },
-          { "key": "Authorization", "value": "Bearer <access_token>" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"id\": 1,\n  \"user\": {\n    \"email\": \"updateduser@example.com\",\n    \"role\": \"ADMIN\"\n  }\n}"
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}" },
+            "url": "{{base_url}}/api/auth/refresh"
+          }
         },
-        "url": {
-          "raw": "{{base_url}}/api/users",
-          "host": ["{{base_url}}"],
-          "path": ["api", "users"]
-        }
-      }
-    },
-    {
-      "name": "User - Delete",
-      "request": {
-        "method": "DELETE",
-        "header": [
-          { "key": "Authorization", "value": "Bearer <access_token>" },
-          { "key": "Content-Type", "value": "application/json" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"id\": 1\n}"
+        {
+          "name": "Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/api/auth/profile"
+          }
         },
-        "url": {
-          "raw": "{{base_url}}/api/users",
-          "host": ["{{base_url}}"],
-          "path": ["api", "users"]
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}" },
+            "url": "{{base_url}}/api/auth/logout"
+          }
         }
-      }
+      ]
     },
     {
-      "name": "Role - Create",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" },
-          { "key": "Authorization", "value": "Bearer <access_token>" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"ADMIN\"\n}"
+      "name": "Users",
+      "item": [
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"newuser\",\n  \"email\": \"newuser@example.com\",\n  \"password\": \"Password123!\",\n  \"role\": \"USER\"\n}" },
+            "url": "{{base_url}}/api/users"
+          }
         },
-        "url": {
-          "raw": "{{base_url}}/api/roles",
-          "host": ["{{base_url}}"],
-          "path": ["api", "roles"]
-        }
-      }
-    },
-    {
-      "name": "Role - List",
-      "request": {
-        "method": "GET",
-        "header": [
-          { "key": "Authorization", "value": "Bearer <access_token>" }
-        ],
-        "url": {
-          "raw": "{{base_url}}/api/roles",
-          "host": ["{{base_url}}"],
-          "path": ["api", "roles"]
-        }
-      }
-    },
-    {
-      "name": "Role - Update",
-      "request": {
-        "method": "PUT",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" },
-          { "key": "Authorization", "value": "Bearer <access_token>" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"id\": 1,\n  \"role\": {\n    \"name\": \"UPDATED_ROLE\"\n  }\n}"
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/api/users"
+          }
         },
-        "url": {
-          "raw": "{{base_url}}/api/roles",
-          "host": ["{{base_url}}"],
-          "path": ["api", "roles"]
+        {
+          "name": "Get User",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"id\": 1\n}" },
+            "url": "{{base_url}}/api/users/get"
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"id\": 1,\n  \"user\": {\n    \"email\": \"updated@example.com\",\n    \"role\": \"USER\"\n  }\n}" },
+            "url": "{{base_url}}/api/users"
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"id\": 2\n}" },
+            "url": "{{base_url}}/api/users"
+          }
         }
-      }
+      ]
     },
     {
-      "key": "base_url",
-      "value": "http://localhost:8080"
+      "name": "Roles",
+      "item": [
+        {
+          "name": "Create Role",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"AUDITOR\"\n}" },
+            "url": "{{base_url}}/api/roles"
+          }
+        },
+        {
+          "name": "List Roles",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/api/roles"
+          }
+        },
+        {
+          "name": "Update Role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"id\": 3,\n  \"role\": {\n    \"name\": \"AUDITOR\"\n  }\n}" },
+            "url": "{{base_url}}/api/roles"
+          }
+        },
+        {
+          "name": "Delete Role",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/api/roles/3"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Devices",
+      "item": [
+        {
+          "name": "Register Device",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"deviceId\": \"laptop-01\",\n  \"ownerId\": 2,\n  \"deviceType\": \"laptop\",\n  \"os\": \"linux\",\n  \"ipAddress\": \"192.168.1.10\"\n}" },
+            "url": "{{base_url}}/api/devices/register"
+          }
+        },
+        {
+          "name": "Get Device",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/api/devices/demo-laptop-01"
+          }
+        },
+        {
+          "name": "Trust Score",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/api/devices/demo-laptop-01/trust-score"
+          }
+        },
+        {
+          "name": "Devices By User",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/api/devices/user/2"
+          }
+        },
+        {
+          "name": "Update Device",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"deviceType\": \"laptop\",\n  \"os\": \"windows\",\n  \"ipAddress\": \"192.168.1.20\"\n}" },
+            "url": "{{base_url}}/api/devices/demo-laptop-01/update"
+          }
+        },
+        {
+          "name": "Evaluate Trust",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/api/devices/evaluate?deviceId=demo-laptop-01"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Risk",
+      "item": [
+        {
+          "name": "Calculate Risk",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"userId\": 2,\n  \"deviceId\": \"demo-laptop-01\",\n  \"ipAddress\": \"203.0.113.5\",\n  \"sessionId\": \"test-session-1\"\n}" },
+            "url": "{{base_url}}/api/risk/calculate"
+          }
+        },
+        {
+          "name": "User Risk History",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/api/risk/user/2"
+          }
+        },
+        {
+          "name": "Session Risk",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/api/risk/session/{{session_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Policies",
+      "item": [
+        {
+          "name": "List Policies",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/api/policies"
+          }
+        },
+        {
+          "name": "Create Policy",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Finance Access\",\n  \"description\": \"Finance module access\",\n  \"resource\": \"finance\",\n  \"action\": \"access\",\n  \"requiredRole\": \"USER\",\n  \"maxRiskThreshold\": 60,\n  \"enabled\": true\n}" },
+            "url": "{{base_url}}/api/policies"
+          }
+        },
+        {
+          "name": "Evaluate Policy",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"userId\": 2,\n  \"resource\": \"login\",\n  \"action\": \"access\",\n  \"ipAddress\": \"192.168.1.50\",\n  \"deviceId\": \"demo-laptop-01\"\n}" },
+            "url": "{{base_url}}/api/policies/evaluate"
+          }
+        },
+        {
+          "name": "Update Policy",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Finance Access\",\n  \"description\": \"Updated\",\n  \"resource\": \"finance\",\n  \"action\": \"access\",\n  \"requiredRole\": \"USER\",\n  \"maxRiskThreshold\": 55,\n  \"enabled\": true\n}" },
+            "url": "{{base_url}}/api/policies/5"
+          }
+        },
+        {
+          "name": "Delete Policy",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/api/policies/5"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Monitoring",
+      "item": [
+        {
+          "name": "Active Sessions",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/api/sessions"
+          }
+        },
+        {
+          "name": "Check Anomaly",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"sessionId\": \"{{session_id}}\"\n}" },
+            "url": "{{base_url}}/api/anomaly/check"
+          }
+        },
+        {
+          "name": "Terminate Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"sessionId\": \"{{session_id}}\",\n  \"reason\": \"Manual admin termination\"\n}" },
+            "url": "{{base_url}}/api/session/terminate"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Attacks",
+      "item": [
+        {
+          "name": "Credential Theft",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"demo\",\n  \"sourceIp\": \"198.51.100.10\"\n}" },
+            "url": "{{base_url}}/api/attack/credential-theft"
+          }
+        },
+        {
+          "name": "Privilege Escalation",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"userId\": 2,\n  \"targetRole\": \"ADMIN\",\n  \"sourceIp\": \"198.51.100.11\"\n}" },
+            "url": "{{base_url}}/api/attack/privilege-escalation"
+          }
+        },
+        {
+          "name": "Lateral Movement",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"userId\": 2,\n  \"targetResource\": \"admin\",\n  \"sourceIp\": \"198.51.100.12\"\n}" },
+            "url": "{{base_url}}/api/attack/lateral-movement"
+          }
+        },
+        {
+          "name": "Attack Report",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/api/attack/report"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Audit Logs",
+      "item": [
+        {
+          "name": "All Logs",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/api/logs"
+          }
+        },
+        {
+          "name": "Critical Logs",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/api/logs?severity=CRITICAL"
+          }
+        },
+        {
+          "name": "Logs By Event",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/api/logs?eventType=POLICY_DENIED"
+          }
+        },
+        {
+          "name": "Logs By Username",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/api/logs?username=admin"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Metrics",
+      "item": [
+        {
+          "name": "Comparison (Traditional vs Zero Trust)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/api/metrics/comparison"
+          }
+        }
+      ]
     }
   ]
 }

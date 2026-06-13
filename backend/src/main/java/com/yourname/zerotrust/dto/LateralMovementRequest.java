@@ -1,6 +1,9 @@
 package com.yourname.zerotrust.dto;
 
+import jakarta.validation.constraints.NotNull;
+
 public class LateralMovementRequest {
+    @NotNull
     private Long userId;
     private String sourceSessionId;
     private String targetResource;

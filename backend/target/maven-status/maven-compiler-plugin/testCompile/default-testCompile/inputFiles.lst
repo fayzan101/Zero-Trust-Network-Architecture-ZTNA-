@@ -1,5 +1,12 @@
 F:\Desktop\Projects\Extras\ZTNA\backend\src\test\java\com\yourname\zerotrust\risk\RiskCalculatorTest.java
+F:\Desktop\Projects\Extras\ZTNA\backend\src\test\java\com\yourname\zerotrust\audit\AuditLogServiceTest.java
+F:\Desktop\Projects\Extras\ZTNA\backend\src\test\java\com\yourname\zerotrust\device\DeviceServiceTest.java
+F:\Desktop\Projects\Extras\ZTNA\backend\src\test\java\com\yourname\zerotrust\util\TokenHashUtilTest.java
+F:\Desktop\Projects\Extras\ZTNA\backend\src\test\java\com\yourname\zerotrust\security\AuthRateLimitFilterTest.java
 F:\Desktop\Projects\Extras\ZTNA\backend\src\test\java\com\yourname\zerotrust\attack\AttackServiceTest.java
 F:\Desktop\Projects\Extras\ZTNA\backend\src\test\java\com\yourname\zerotrust\policy\PolicyEvaluatorTest.java
+F:\Desktop\Projects\Extras\ZTNA\backend\src\test\java\com\yourname\zerotrust\integration\NeonDatabaseIntegrationTest.java
 F:\Desktop\Projects\Extras\ZTNA\backend\src\test\java\com\yourname\zerotrust\support\TestDataFactory.java
+F:\Desktop\Projects\Extras\ZTNA\backend\src\test\java\com\yourname\zerotrust\controller\RbacIntegrationTest.java
 F:\Desktop\Projects\Extras\ZTNA\backend\src\test\java\com\yourname\zerotrust\controller\AuthControllerIntegrationTest.java
+F:\Desktop\Projects\Extras\ZTNA\backend\src\test\java\com\yourname\zerotrust\role\RoleServiceTest.java

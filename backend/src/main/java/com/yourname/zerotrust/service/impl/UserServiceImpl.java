@@ -1,15 +1,21 @@
 package com.yourname.zerotrust.service.impl;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import com.yourname.zerotrust.dto.CreateUserRequest;
 import com.yourname.zerotrust.dto.GenericResponse;
 import com.yourname.zerotrust.dto.UserDto;
+import com.yourname.zerotrust.entity.Role;
 import com.yourname.zerotrust.entity.User;
+import com.yourname.zerotrust.repository.RoleRepository;
 import com.yourname.zerotrust.repository.UserRepository;
 import com.yourname.zerotrust.service.UserService;
 
@@ -19,22 +25,34 @@ public class UserServiceImpl implements UserService {
     private UserRepository userRepository;
 
     @Autowired
+    private RoleRepository roleRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Override
-    public GenericResponse createUser(User user) {
-        // Check for duplicate username
-        if (userRepository.existsByUsername(user.getUsername())) {
+    public GenericResponse createUser(CreateUserRequest request) {
+        if (userRepository.existsByUsername(request.getUsername())) {
             return new GenericResponse("Error: Username already exists");
         }
 
-        // Check for duplicate email
-        if (userRepository.existsByEmail(user.getEmail())) {
+        if (userRepository.existsByEmail(request.getEmail())) {
             return new GenericResponse("Error: Email already exists");
         }
 
-        // Hash password before saving
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        User user = new User();
+        user.setUsername(request.getUsername());
+        user.setEmail(request.getEmail());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setMfaEnabled(false);
+
+        String roleName = request.getRole() != null ? request.getRole() : "USER";
+        roleRepository.findByName(roleName).ifPresent(role -> {
+            Set<Role> roles = new HashSet<>();
+            roles.add(role);
+            user.setRoles(roles);
+        });
+
         userRepository.save(user);
         return new GenericResponse("User created successfully");
     }
@@ -62,7 +80,6 @@ public class UserServiceImpl implements UserService {
             return new GenericResponse("Error: User not found");
         }
 
-        // Check for duplicate username (if changed)
         if (user.getUsername() != null && !user.getUsername().equals(existingUser.getUsername())) {
             if (userRepository.existsByUsername(user.getUsername())) {
                 return new GenericResponse("Error: Username already exists");
@@ -70,7 +87,6 @@ public class UserServiceImpl implements UserService {
             existingUser.setUsername(user.getUsername());
         }
 
-        // Check for duplicate email (if changed)
         if (user.getEmail() != null && !user.getEmail().equals(existingUser.getEmail())) {
             if (userRepository.existsByEmail(user.getEmail())) {
                 return new GenericResponse("Error: Email already exists");
@@ -78,12 +94,10 @@ public class UserServiceImpl implements UserService {
             existingUser.setEmail(user.getEmail());
         }
 
-        // Update password if provided
         if (user.getPassword() != null && !user.getPassword().isEmpty()) {
             existingUser.setPassword(passwordEncoder.encode(user.getPassword()));
         }
 
-        // Update roles if provided
         if (user.getRoles() != null) {
             existingUser.setRoles(user.getRoles());
         }

@@ -10,4 +10,5 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     List<AuditLog> findAllByOrderByCreatedAtDesc();
     List<AuditLog> findByEventTypeOrderByCreatedAtDesc(String eventType);
     List<AuditLog> findByUsernameOrderByCreatedAtDesc(String username);
+    List<AuditLog> findBySeverityOrderByCreatedAtDesc(String severity);
 }

@@ -1,20 +1,17 @@
-# Spring Boot application configuration
-datasource:
-  url: jdbc:postgresql://localhost:5433/zerotrustdb
-  username: postgres
-  password: password
-  driver-class-name: org.postgresql.Driver
 spring:
+  config:
+    import: optional:file:.env[.properties]
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/zerotrustdb}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:password}
+    driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: true
+    open-in-view: false
     defer-datasource-initialization: true
-  datasource:
-    url: jdbc:postgresql://localhost:5433/zerotrustdb
-    username: postgres
-    password: password
-    driver-class-name: org.postgresql.Driver
   sql:
     init:
       mode: always

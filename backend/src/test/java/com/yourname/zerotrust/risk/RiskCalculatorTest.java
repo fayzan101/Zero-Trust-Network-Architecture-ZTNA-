@@ -1,6 +1,7 @@
 package com.yourname.zerotrust.risk;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.LocalDateTime;
@@ -11,6 +12,8 @@ import org.junit.jupiter.api.Test;
 
 import com.yourname.zerotrust.entity.Role;
 import com.yourname.zerotrust.entity.User;
+import com.yourname.zerotrust.risk.RiskBreakdown;
+import com.yourname.zerotrust.risk.RiskCalculator;
 
 class RiskCalculatorTest {
 
@@ -55,6 +58,17 @@ class RiskCalculatorTest {
     void calculateFinalRisk_clampsTo100() {
         assertEquals(100, calculator.calculateFinalRisk(100, 100, 100));
         assertEquals(0, calculator.calculateFinalRisk(0, 0, 0));
+    }
+
+    @Test
+    void assess_includesExplanatoryReasons() {
+        User user = user(false, false);
+        RiskBreakdown breakdown = calculator.assess(user, null, "203.0.113.1", true);
+
+        assertTrue(breakdown.getFinalRisk() > 0);
+        assertNotNull(breakdown.getReasons());
+        assertTrue(breakdown.getReasons().stream().anyMatch(r -> r.contains("MFA")));
+        assertTrue(breakdown.getReasons().stream().anyMatch(r -> r.contains("Unknown device")));
     }
 
     private User user(boolean newAccount, boolean mfaEnabled) {

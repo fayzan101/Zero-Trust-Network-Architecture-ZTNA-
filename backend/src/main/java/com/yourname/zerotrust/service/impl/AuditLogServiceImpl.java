@@ -65,6 +65,13 @@ public class AuditLogServiceImpl implements AuditLogService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public List<AuditLogResponse> getLogsBySeverity(String severity) {
+        return auditLogRepository.findBySeverityOrderByCreatedAtDesc(severity.toUpperCase()).stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
     private AuditLogResponse toResponse(AuditLog log) {
         AuditLogResponse response = new AuditLogResponse();
         response.setId(log.getId());
