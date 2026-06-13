@@ -5,6 +5,7 @@ public class ProfileResponse {
     private String username;
     private String email;
     private String role;
+    private boolean mfaEnabled;
     private String createdAt;
     private String lastLogin;
 
@@ -17,6 +18,8 @@ public class ProfileResponse {
     public void setEmail(String email) { this.email = email; }
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
+    public boolean isMfaEnabled() { return mfaEnabled; }
+    public void setMfaEnabled(boolean mfaEnabled) { this.mfaEnabled = mfaEnabled; }
     public String getCreatedAt() { return createdAt; }
     public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
     public String getLastLogin() { return lastLogin; }

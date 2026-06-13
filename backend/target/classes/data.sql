@@ -8,7 +8,7 @@ SELECT 'Allow Login', 'Permit login when risk is within acceptable bounds', 'log
 WHERE NOT EXISTS (SELECT 1 FROM policies WHERE name = 'Allow Login');
 
 INSERT INTO policies (name, description, resource, action, required_role, min_device_trust, max_risk_threshold, enabled, created_at)
-SELECT 'User General Access', 'Standard user access with moderate risk tolerance', '*', 'access', 'USER', NULL, 80, TRUE, NOW()
+SELECT 'User General Access', 'Standard user access with moderate risk tolerance', '*', 'access', 'USER,ADMIN', NULL, 80, TRUE, NOW()
 WHERE NOT EXISTS (SELECT 1 FROM policies WHERE name = 'User General Access');
 
 INSERT INTO policies (name, description, resource, action, required_role, min_device_trust, max_risk_threshold, enabled, created_at)
