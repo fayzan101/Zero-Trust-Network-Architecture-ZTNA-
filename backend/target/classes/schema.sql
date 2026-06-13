@@ -64,3 +64,17 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     severity VARCHAR(20) NOT NULL,
     created_at TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS attacks (
+    id SERIAL PRIMARY KEY,
+    attack_type VARCHAR(100) NOT NULL,
+    target_user_id BIGINT,
+    target_username VARCHAR(255),
+    source_ip VARCHAR(100),
+    details VARCHAR(1000),
+    detected BOOLEAN NOT NULL,
+    detection_method VARCHAR(100),
+    detection_details VARCHAR(1000),
+    severity VARCHAR(20) NOT NULL,
+    simulated_at TIMESTAMP
+);
