@@ -53,3 +53,14 @@ CREATE TABLE IF NOT EXISTS risk_scores (
     final_risk INTEGER NOT NULL,
     calculated_at TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id SERIAL PRIMARY KEY,
+    event_type VARCHAR(100) NOT NULL,
+    user_id BIGINT,
+    username VARCHAR(255),
+    ip_address VARCHAR(100),
+    details VARCHAR(1000),
+    severity VARCHAR(20) NOT NULL,
+    created_at TIMESTAMP
+);

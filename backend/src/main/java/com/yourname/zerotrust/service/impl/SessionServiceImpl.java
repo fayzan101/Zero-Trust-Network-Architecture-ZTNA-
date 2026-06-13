@@ -16,6 +16,8 @@ import com.yourname.zerotrust.entity.Session;
 import com.yourname.zerotrust.entity.User;
 import com.yourname.zerotrust.monitoring.AnomalyDetector;
 import com.yourname.zerotrust.repository.SessionRepository;
+import com.yourname.zerotrust.repository.UserRepository;
+import com.yourname.zerotrust.service.AuditLogService;
 import com.yourname.zerotrust.service.SessionService;
 
 @Service
@@ -26,6 +28,12 @@ public class SessionServiceImpl implements SessionService {
 
     @Autowired
     private AnomalyDetector anomalyDetector;
+
+    @Autowired
+    private AuditLogService auditLogService;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Override
     public SessionResponse createSession(User user, String deviceId, String ipAddress, RiskScoreResponse risk) {
@@ -44,6 +52,8 @@ public class SessionServiceImpl implements SessionService {
         if (!anomalies.isEmpty()) {
             session.setAnomalyDetected(true);
             session.setAnomalyReason(String.join("; ", anomalies));
+            auditLogService.logWarn("ANOMALY_DETECTED", user.getId(), user.getUsername(),
+                    ipAddress, String.join("; ", anomalies));
         }
 
         session = sessionRepository.save(session);
@@ -79,6 +89,11 @@ public class SessionServiceImpl implements SessionService {
             session.setAnomalyReason(String.join("; ", anomalies));
             session.setLastActivityAt(LocalDateTime.now());
             sessionRepository.save(session);
+
+            String username = userRepository.findById(session.getUserId())
+                    .map(User::getUsername).orElse("unknown");
+            auditLogService.logWarn("ANOMALY_DETECTED", session.getUserId(), username,
+                    session.getIpAddress(), String.join("; ", anomalies));
         }
 
         return response;
@@ -96,6 +111,13 @@ public class SessionServiceImpl implements SessionService {
         session.setTerminationReason(
                 request.getReason() != null ? request.getReason() : "Manual termination");
         session = sessionRepository.save(session);
+
+        String username = userRepository.findById(session.getUserId())
+                .map(User::getUsername).orElse("unknown");
+        auditLogService.logWarn("SESSION_TERMINATED", session.getUserId(), username,
+                session.getIpAddress(), "Session " + session.getSessionId() + " terminated: "
+                        + session.getTerminationReason());
+
         return toResponse(session);
     }
 

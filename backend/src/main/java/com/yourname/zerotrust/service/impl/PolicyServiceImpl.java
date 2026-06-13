@@ -11,8 +11,11 @@ import com.yourname.zerotrust.dto.PolicyEvaluateResponse;
 import com.yourname.zerotrust.dto.PolicyRequest;
 import com.yourname.zerotrust.dto.PolicyResponse;
 import com.yourname.zerotrust.entity.Policy;
+import com.yourname.zerotrust.entity.User;
 import com.yourname.zerotrust.policy.PolicyEvaluator;
 import com.yourname.zerotrust.repository.PolicyRepository;
+import com.yourname.zerotrust.repository.UserRepository;
+import com.yourname.zerotrust.service.AuditLogService;
 import com.yourname.zerotrust.service.PolicyService;
 
 @Service
@@ -23,6 +26,12 @@ public class PolicyServiceImpl implements PolicyService {
 
     @Autowired
     private PolicyEvaluator policyEvaluator;
+
+    @Autowired
+    private AuditLogService auditLogService;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Override
     public PolicyResponse createPolicy(PolicyRequest request) {
@@ -57,7 +66,16 @@ public class PolicyServiceImpl implements PolicyService {
 
     @Override
     public PolicyEvaluateResponse evaluate(PolicyEvaluateRequest request) {
-        return policyEvaluator.evaluate(request);
+        PolicyEvaluateResponse result = policyEvaluator.evaluate(request);
+        if (!result.isAllowed()) {
+            String username = userRepository.findById(request.getUserId())
+                    .map(User::getUsername).orElse("unknown");
+            auditLogService.logCritical("POLICY_DENIED", request.getUserId(), username,
+                    request.getIpAddress(),
+                    "Resource=" + request.getResource() + ", action=" + request.getAction()
+                            + ", reason=" + result.getReason());
+        }
+        return result;
     }
 
     private void applyRequest(Policy policy, PolicyRequest request) {
