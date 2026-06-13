@@ -1,0 +1,48 @@
+<div class="login-page">
+  <div class="login-card card">
+    <div class="login-header">
+      <div class="logo">ZT</div>
+      <h1>Security Console</h1>
+      <p>Zero Trust Network Access Simulator</p>
+    </div>
+
+    @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
+    @if (info()) { <div class="alert alert-info">{{ info() }}</div> }
+
+    <form (ngSubmit)="submit()">
+      <div class="field">
+        <label>Username</label>
+        <input [(ngModel)]="username" name="username" required />
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" [(ngModel)]="password" name="password" required />
+      </div>
+
+      @if (mode() === 'mfa' || mode() === 'stepup') {
+        <div class="field">
+          <label>{{ mode() === 'mfa' ? 'MFA OTP' : 'OTP (if enrolled)' }}</label>
+          <input [(ngModel)]="otp" name="otp" placeholder="6-digit code" />
+        </div>
+      }
+
+      <div class="field">
+        <label>Device ID</label>
+        <input [(ngModel)]="deviceId" name="deviceId" />
+      </div>
+      <div class="field">
+        <label>IP Address</label>
+        <input [(ngModel)]="ipAddress" name="ipAddress" />
+      </div>
+
+      <button type="submit" class="btn btn-primary full" [disabled]="loading">
+        {{ mode() === 'login' ? 'Sign in' : mode() === 'mfa' ? 'Verify MFA' : 'Complete Step-Up' }}
+      </button>
+    </form>
+
+    <div class="hints">
+      <button type="button" class="link-btn" (click)="useHighRisk()">Simulate risky login</button>
+      <span class="hint">demo / Demo123! · admin / Admin123!</span>
+    </div>
+  </div>
+</div>

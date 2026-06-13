@@ -1,0 +1,86 @@
+<div class="page-header">
+  <h1>Security Overview</h1>
+  <p>Real-time zero-trust monitoring and traditional vs ZT comparison</p>
+</div>
+
+@if (metrics) {
+  <div class="grid-4 stats">
+    <div class="stat-card">
+      <div class="value">{{ metrics.zeroTrust.activeSessions ?? 0 }}</div>
+      <div class="label">Active Sessions</div>
+    </div>
+    <div class="stat-card">
+      <div class="value">{{ metrics.zeroTrust.policiesEnforced ?? 0 }}</div>
+      <div class="label">Policies Enforced</div>
+    </div>
+    <div class="stat-card">
+      <div class="value">{{ metrics.zeroTrust.averageRiskScore?.toFixed(0) ?? 0 }}</div>
+      <div class="label">Avg Risk Score</div>
+    </div>
+    <div class="stat-card">
+      <div class="value">{{ metrics.zeroTrust.detectionRate?.toFixed(0) ?? 0 }}%</div>
+      <div class="label">Attack Detection</div>
+    </div>
+  </div>
+
+  <div class="grid-2 compare-row">
+    <div class="card model-card traditional">
+      <h3 class="card-title">Traditional Access</h3>
+      <p class="model-desc">{{ metrics.traditional.accessControl }}</p>
+      <ul>
+        <li>{{ metrics.traditional.deviceVerification }}</li>
+        <li>{{ metrics.traditional.riskScoring }}</li>
+        <li>Detection rate: {{ metrics.traditional.detectionRate }}%</li>
+      </ul>
+    </div>
+    <div class="card model-card zerotrust">
+      <h3 class="card-title">Zero Trust</h3>
+      <p class="model-desc">{{ metrics.zeroTrust.accessControl }}</p>
+      <ul>
+        <li>{{ metrics.zeroTrust.deviceVerification }}</li>
+        <li>{{ metrics.zeroTrust.riskScoring }}</li>
+        <li>{{ metrics.zeroTrust.continuousMonitoring }}</li>
+      </ul>
+    </div>
+  </div>
+}
+
+<div class="grid-2 feed-row">
+  <div class="card feed-card">
+    <div class="feed-header">
+      <h3 class="card-title">Live Security Feed</h3>
+      <span class="live-badge" [class.on]="ws.connected()">
+        {{ ws.connected() ? '● Live' : '○ Offline' }}
+      </span>
+    </div>
+    <div class="feed-list">
+      @if (ws.events().length === 0) {
+        <div class="empty">Waiting for security events…</div>
+      }
+      @for (e of ws.events(); track $index) {
+        <div class="feed-item" [class]="severityClass(e.severity)">
+          <div class="feed-top">
+            <span class="feed-type">{{ e.eventType || e.type }}</span>
+            <span class="badge" [class]="'badge-' + severityClass(e.severity)">{{ e.severity || 'INFO' }}</span>
+          </div>
+          <div class="feed-meta mono">
+            {{ e.timestamp | date:'HH:mm:ss' }}
+            @if (e.username) { · {{ e.username }} }
+            @if (e.ipAddress) { · {{ e.ipAddress }} }
+          </div>
+          @if (e.details) { <div class="feed-details">{{ e.details }}</div> }
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 class="card-title">Quick Actions</h3>
+    <div class="actions">
+      <a routerLink="/compare" class="action-tile">⇌ Run ZT Comparison</a>
+      <a routerLink="/attacks" class="action-tile">⚡ Simulate Attack</a>
+      <a routerLink="/incidents" class="action-tile">◈ View Incidents</a>
+      <a routerLink="/sessions" class="action-tile">◎ Monitor Sessions</a>
+    </div>
+  </div>
+</div>
