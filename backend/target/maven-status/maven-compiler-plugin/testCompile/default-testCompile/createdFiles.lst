@@ -1,0 +1,5 @@
+com\yourname\zerotrust\support\TestDataFactory.class
+com\yourname\zerotrust\attack\AttackServiceTest.class
+com\yourname\zerotrust\risk\RiskCalculatorTest.class
+com\yourname\zerotrust\controller\AuthControllerIntegrationTest.class
+com\yourname\zerotrust\policy\PolicyEvaluatorTest.class
