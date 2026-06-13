@@ -8,6 +8,7 @@ public class AuditLogResponse {
     private String ipAddress;
     private String details;
     private String severity;
+    private String correlationId;
     private String createdAt;
 
     public Long getId() { return id; }
@@ -24,6 +25,8 @@ public class AuditLogResponse {
     public void setDetails(String details) { this.details = details; }
     public String getSeverity() { return severity; }
     public void setSeverity(String severity) { this.severity = severity; }
+    public String getCorrelationId() { return correlationId; }
+    public void setCorrelationId(String correlationId) { this.correlationId = correlationId; }
     public String getCreatedAt() { return createdAt; }
     public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
 }

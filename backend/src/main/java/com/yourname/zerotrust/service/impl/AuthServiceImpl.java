@@ -3,12 +3,16 @@ package com.yourname.zerotrust.service.impl;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.yourname.zerotrust.auth.StepUpAction;
+import com.yourname.zerotrust.auth.StepUpDecision;
+import com.yourname.zerotrust.auth.StepUpEvaluator;
 import com.yourname.zerotrust.dto.GenericResponse;
 import com.yourname.zerotrust.dto.LoginRequest;
 import com.yourname.zerotrust.dto.LoginResponse;
@@ -27,6 +31,7 @@ import com.yourname.zerotrust.dto.RegisterResponse;
 import com.yourname.zerotrust.dto.RiskCalculateRequest;
 import com.yourname.zerotrust.dto.RiskScoreResponse;
 import com.yourname.zerotrust.dto.SessionResponse;
+import com.yourname.zerotrust.dto.StepUpRequest;
 import com.yourname.zerotrust.entity.Role;
 import com.yourname.zerotrust.entity.User;
 import com.yourname.zerotrust.exception.BadRequestException;
@@ -40,6 +45,7 @@ import com.yourname.zerotrust.service.AuthService;
 import com.yourname.zerotrust.service.RiskService;
 import com.yourname.zerotrust.service.SessionService;
 import com.yourname.zerotrust.util.JwtUtil;
+import com.yourname.zerotrust.util.TokenHashUtil;
 import com.yourname.zerotrust.util.TotpUtil;
 
 @Service
@@ -70,6 +76,12 @@ public class AuthServiceImpl implements AuthService {
 
     @Autowired
     private TotpUtil totpUtil;
+
+    @Autowired
+    private TokenHashUtil tokenHashUtil;
+
+    @Autowired
+    private StepUpEvaluator stepUpEvaluator;
 
     @Override
     public RegisterResponse register(RegisterRequest request) {
@@ -126,7 +138,40 @@ public class AuthServiceImpl implements AuthService {
             return response;
         }
 
-        return completeAuthenticatedLogin(user, request.getDeviceId(), request.getIpAddress());
+        return processPostCredentialAuth(user, request.getDeviceId(), request.getIpAddress(), true);
+    }
+
+    @Override
+    public LoginResponse stepUp(StepUpRequest request) {
+        User user = userRepository.findByUsername(request.getUsername()).orElse(null);
+        if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            auditLogService.logWarn("STEP_UP_FAILED", null, request.getUsername(),
+                    request.getIpAddress(), "Invalid credentials for step-up");
+            throw new UnauthorizedException("Invalid username or password");
+        }
+
+        if (user.isMfaEnabled()) {
+            throw new BadRequestException("Use /api/auth/mfa for MFA-enabled accounts");
+        }
+
+        RiskScoreResponse risk = calculateRisk(user, request.getDeviceId(), request.getIpAddress(), null);
+        StepUpDecision stepUp = stepUpEvaluator.evaluate(risk.getFinalRisk(), false);
+        if (stepUp.getAction() != StepUpAction.REQUIRE_STEP_UP) {
+            throw new BadRequestException("Step-up not required for current risk level");
+        }
+
+        if (user.getMfaSecret() != null) {
+            if (request.getOtp() == null || !totpUtil.verifyCode(user.getMfaSecret(), request.getOtp())) {
+                auditLogService.logWarn("STEP_UP_FAILED", user.getId(), user.getUsername(),
+                        request.getIpAddress(), "Invalid OTP during step-up");
+                throw new UnauthorizedException("Invalid OTP for step-up verification");
+            }
+        }
+
+        auditLogService.logInfo("STEP_UP_SUCCESS", user.getId(), user.getUsername(),
+                request.getIpAddress(), "Step-up authentication completed, risk=" + risk.getFinalRisk());
+
+        return processPostCredentialAuth(user, request.getDeviceId(), request.getIpAddress(), false);
     }
 
     @Override
@@ -146,8 +191,8 @@ public class AuthServiceImpl implements AuthService {
             throw new UnauthorizedException("Invalid OTP");
         }
 
-        LoginResponse loginResult = completeAuthenticatedLogin(
-                user, request.getDeviceId(), request.getIpAddress());
+        LoginResponse loginResult = processPostCredentialAuth(
+                user, request.getDeviceId(), request.getIpAddress(), false);
 
         auditLogService.logInfo("MFA_VERIFY_SUCCESS", user.getId(), user.getUsername(),
                 request.getIpAddress(), "MFA verification successful");
@@ -158,6 +203,101 @@ public class AuthServiceImpl implements AuthService {
         response.setExpiresIn(loginResult.getExpiresIn());
         response.setMessage("MFA verification successful");
         return response;
+    }
+
+    private LoginResponse processPostCredentialAuth(User user, String deviceId, String ipAddress,
+            boolean allowStepUpChallenge) {
+        String correlationId = UUID.randomUUID().toString();
+        RiskScoreResponse risk = calculateRisk(user, deviceId, ipAddress, null);
+
+        PolicyEvaluateRequest policyRequest = new PolicyEvaluateRequest();
+        policyRequest.setUserId(user.getId());
+        policyRequest.setResource("login");
+        policyRequest.setAction("access");
+        policyRequest.setDeviceId(deviceId);
+        policyRequest.setIpAddress(ipAddress);
+        PolicyEvaluateResponse policyResult = policyEvaluator.evaluate(policyRequest);
+
+        StepUpDecision stepUp = stepUpEvaluator.evaluate(risk.getFinalRisk(), user.isMfaEnabled());
+
+        if (!policyResult.isAllowed()) {
+            auditLogService.logCritical("ACCESS_DENIED", user.getId(), user.getUsername(),
+                    ipAddress, "Login denied: " + policyResult.getReason()
+                            + " (risk=" + risk.getFinalRisk() + ")", correlationId);
+            throw new ForbiddenException("ACCESS_DENIED: " + policyResult.getReason());
+        }
+
+        if (stepUp.getAction() == StepUpAction.DENY) {
+            auditLogService.logCritical("STEP_UP_DENIED", user.getId(), user.getUsername(),
+                    ipAddress, stepUp.getReason() + " (risk=" + risk.getFinalRisk() + ")", correlationId);
+            throw new ForbiddenException("ACCESS_DENIED: " + stepUp.getReason());
+        }
+
+        if (allowStepUpChallenge && stepUp.getAction() == StepUpAction.REQUIRE_STEP_UP) {
+            LoginResponse challenge = new LoginResponse();
+            challenge.setMessage("STEP_UP_REQUIRED");
+            challenge.setStepUpRequired(true);
+            challenge.setStepUpLevel(stepUp.getLevel());
+            challenge.setUserRisk(risk.getUserRisk());
+            challenge.setDeviceRisk(risk.getDeviceRisk());
+            challenge.setContextRisk(risk.getContextRisk());
+            challenge.setFinalRisk(risk.getFinalRisk());
+            challenge.setRiskReasons(risk.getReasons());
+            challenge.setAccessAllowed(false);
+            auditLogService.logWarn("STEP_UP_REQUIRED", user.getId(), user.getUsername(),
+                    ipAddress, stepUp.getReason(), correlationId);
+            return challenge;
+        }
+
+        return issueTokensAndSession(user, deviceId, ipAddress, risk, correlationId);
+    }
+
+    private LoginResponse issueTokensAndSession(User user, String deviceId, String ipAddress,
+            RiskScoreResponse risk, String correlationId) {
+        LoginResponse response = new LoginResponse();
+        response.setUserRisk(risk.getUserRisk());
+        response.setDeviceRisk(risk.getDeviceRisk());
+        response.setContextRisk(risk.getContextRisk());
+        response.setFinalRisk(risk.getFinalRisk());
+        response.setRiskReasons(risk.getReasons());
+        response.setStepUpLevel("LOW");
+        response.setAccessAllowed(true);
+
+        SessionResponse session = sessionService.createSession(user, deviceId, ipAddress, risk);
+
+        RiskCalculateRequest sessionRiskRequest = new RiskCalculateRequest();
+        sessionRiskRequest.setUserId(user.getId());
+        sessionRiskRequest.setDeviceId(deviceId);
+        sessionRiskRequest.setIpAddress(ipAddress);
+        sessionRiskRequest.setSessionId(session.getSessionId());
+        riskService.calculateRisk(sessionRiskRequest);
+
+        String accessToken = jwtUtil.generateAccessToken(user.getUsername());
+        String refreshToken = jwtUtil.generateRefreshToken(user.getUsername());
+
+        user.setRefreshToken(tokenHashUtil.hash(refreshToken));
+        user.setLastLogin(LocalDateTime.now());
+        userRepository.save(user);
+
+        auditLogService.logInfo("LOGIN_SUCCESS", user.getId(), user.getUsername(),
+                ipAddress, "Login successful, session=" + session.getSessionId()
+                        + ", risk=" + risk.getFinalRisk(), correlationId);
+
+        response.setAccessToken(accessToken);
+        response.setRefreshToken(refreshToken);
+        response.setExpiresIn(jwtUtil.getAccessTokenExpirySeconds());
+        response.setSessionId(session.getSessionId());
+        response.setMessage("Login successful");
+        return response;
+    }
+
+    private RiskScoreResponse calculateRisk(User user, String deviceId, String ipAddress, String sessionId) {
+        RiskCalculateRequest riskRequest = new RiskCalculateRequest();
+        riskRequest.setUserId(user.getId());
+        riskRequest.setDeviceId(deviceId);
+        riskRequest.setIpAddress(ipAddress);
+        riskRequest.setSessionId(sessionId);
+        return riskService.calculateRisk(riskRequest);
     }
 
     @Override
@@ -237,67 +377,9 @@ public class AuthServiceImpl implements AuthService {
         return new GenericResponse("MFA disabled successfully");
     }
 
-    private LoginResponse completeAuthenticatedLogin(User user, String deviceId, String ipAddress) {
-        LoginResponse response = new LoginResponse();
-
-        RiskCalculateRequest riskRequest = new RiskCalculateRequest();
-        riskRequest.setUserId(user.getId());
-        riskRequest.setDeviceId(deviceId);
-        riskRequest.setIpAddress(ipAddress);
-        RiskScoreResponse risk = riskService.calculateRisk(riskRequest);
-
-        PolicyEvaluateRequest policyRequest = new PolicyEvaluateRequest();
-        policyRequest.setUserId(user.getId());
-        policyRequest.setResource("login");
-        policyRequest.setAction("access");
-        policyRequest.setDeviceId(deviceId);
-        policyRequest.setIpAddress(ipAddress);
-        PolicyEvaluateResponse policyResult = policyEvaluator.evaluate(policyRequest);
-
-        response.setUserRisk(risk.getUserRisk());
-        response.setDeviceRisk(risk.getDeviceRisk());
-        response.setContextRisk(risk.getContextRisk());
-        response.setFinalRisk(risk.getFinalRisk());
-
-        if (!policyResult.isAllowed()) {
-            auditLogService.logCritical("ACCESS_DENIED", user.getId(), user.getUsername(),
-                    ipAddress, "Login denied: " + policyResult.getReason()
-                            + " (risk=" + risk.getFinalRisk() + ")");
-            throw new ForbiddenException("ACCESS_DENIED: " + policyResult.getReason());
-        }
-
-        SessionResponse session = sessionService.createSession(user, deviceId, ipAddress, risk);
-
-        RiskCalculateRequest sessionRiskRequest = new RiskCalculateRequest();
-        sessionRiskRequest.setUserId(user.getId());
-        sessionRiskRequest.setDeviceId(deviceId);
-        sessionRiskRequest.setIpAddress(ipAddress);
-        sessionRiskRequest.setSessionId(session.getSessionId());
-        riskService.calculateRisk(sessionRiskRequest);
-
-        String accessToken = jwtUtil.generateAccessToken(user.getUsername());
-        String refreshToken = jwtUtil.generateRefreshToken(user.getUsername());
-
-        user.setRefreshToken(refreshToken);
-        user.setLastLogin(LocalDateTime.now());
-        userRepository.save(user);
-
-        auditLogService.logInfo("LOGIN_SUCCESS", user.getId(), user.getUsername(),
-                ipAddress, "Login successful, session=" + session.getSessionId()
-                        + ", risk=" + risk.getFinalRisk());
-
-        response.setAccessToken(accessToken);
-        response.setRefreshToken(refreshToken);
-        response.setExpiresIn(jwtUtil.getAccessTokenExpirySeconds());
-        response.setSessionId(session.getSessionId());
-        response.setMessage("Login successful");
-        response.setAccessAllowed(true);
-        return response;
-    }
-
     @Override
     public GenericResponse logout(LogoutRequest request) {
-        User user = userRepository.findByRefreshToken(request.getRefreshToken()).orElse(null);
+        User user = userRepository.findByRefreshToken(tokenHashUtil.hash(request.getRefreshToken())).orElse(null);
         if (user != null) {
             sessionService.terminateSessionsForUser(user.getId(), "User logout");
             user.setRefreshToken(null);
@@ -315,7 +397,7 @@ public class AuthServiceImpl implements AuthService {
             throw new UnauthorizedException("Invalid or expired refresh token");
         }
 
-        User user = userRepository.findByRefreshToken(request.getRefreshToken()).orElse(null);
+        User user = userRepository.findByRefreshToken(tokenHashUtil.hash(request.getRefreshToken())).orElse(null);
         if (user == null) {
             throw new UnauthorizedException("Refresh token not found");
         }
@@ -323,7 +405,7 @@ public class AuthServiceImpl implements AuthService {
         String accessToken = jwtUtil.generateAccessToken(user.getUsername());
         String newRefreshToken = jwtUtil.generateRefreshToken(user.getUsername());
 
-        user.setRefreshToken(newRefreshToken);
+        user.setRefreshToken(tokenHashUtil.hash(newRefreshToken));
         userRepository.save(user);
 
         auditLogService.logInfo("TOKEN_REFRESH", user.getId(), user.getUsername(),

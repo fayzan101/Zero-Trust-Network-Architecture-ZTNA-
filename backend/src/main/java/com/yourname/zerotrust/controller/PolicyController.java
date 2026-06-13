@@ -21,8 +21,14 @@ import com.yourname.zerotrust.dto.PolicyRequest;
 import com.yourname.zerotrust.dto.PolicyResponse;
 import com.yourname.zerotrust.service.PolicyService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api/policies")
+@Tag(name = "Policies", description = "Zero-trust policy management and access evaluation")
 public class PolicyController {
 
     @Autowired
@@ -30,18 +36,23 @@ public class PolicyController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<PolicyResponse> createPolicy(@RequestBody PolicyRequest request) {
+    @Operation(summary = "Create policy", description = "Creates a new access policy with risk thresholds and role requirements. Admin only.")
+    public ResponseEntity<PolicyResponse> createPolicy(@Valid @RequestBody PolicyRequest request) {
         return ResponseEntity.ok(policyService.createPolicy(request));
     }
 
     @GetMapping
+    @Operation(summary = "List policies", description = "Returns all policies (enabled and disabled).")
     public ResponseEntity<List<PolicyResponse>> listPolicies() {
         return ResponseEntity.ok(policyService.listPolicies());
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> updatePolicy(@PathVariable Long id, @RequestBody PolicyRequest request) {
+    @Operation(summary = "Update policy", description = "Updates an existing policy by ID. Admin only.")
+    public ResponseEntity<?> updatePolicy(
+            @Parameter(description = "Policy ID") @PathVariable Long id,
+            @Valid @RequestBody PolicyRequest request) {
         PolicyResponse response = policyService.updatePolicy(id, request);
         if (response == null) {
             return ResponseEntity.notFound().build();
@@ -51,12 +62,16 @@ public class PolicyController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<GenericResponse> deletePolicy(@PathVariable Long id) {
+    @Operation(summary = "Delete policy", description = "Permanently deletes a policy. Admin only.")
+    public ResponseEntity<GenericResponse> deletePolicy(
+            @Parameter(description = "Policy ID") @PathVariable Long id) {
         policyService.deletePolicy(id);
         return ResponseEntity.ok(new GenericResponse("Policy deleted successfully"));
     }
 
     @PostMapping("/evaluate")
+    @Operation(summary = "Evaluate access",
+            description = "Checks whether a user may access a resource/action under active policies and current risk.")
     public ResponseEntity<PolicyEvaluateResponse> evaluate(@RequestBody PolicyEvaluateRequest request) {
         return ResponseEntity.ok(policyService.evaluate(request));
     }

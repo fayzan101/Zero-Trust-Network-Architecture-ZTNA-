@@ -1,5 +1,7 @@
 package com.yourname.zerotrust.dto;
 
+import java.util.List;
+
 public class RiskScoreResponse {
     private Long id;
     private Long userId;
@@ -9,6 +11,7 @@ public class RiskScoreResponse {
     private int contextRisk;
     private int finalRisk;
     private String calculatedAt;
+    private List<String> reasons;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -26,4 +29,6 @@ public class RiskScoreResponse {
     public void setFinalRisk(int finalRisk) { this.finalRisk = finalRisk; }
     public String getCalculatedAt() { return calculatedAt; }
     public void setCalculatedAt(String calculatedAt) { this.calculatedAt = calculatedAt; }
+    public List<String> getReasons() { return reasons; }
+    public void setReasons(List<String> reasons) { this.reasons = reasons; }
 }

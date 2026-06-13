@@ -1,17 +1,25 @@
 package com.yourname.zerotrust.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
 public class DeviceRegisterRequest {
+    @NotBlank
     private String deviceId;
-    private String userId;
+    @NotNull
+    private Long ownerId;
+    @NotBlank
     private String deviceType;
+    @NotBlank
     private String os;
+    @NotBlank
     private String ipAddress;
 
     // Getters and setters
     public String getDeviceId() { return deviceId; }
     public void setDeviceId(String deviceId) { this.deviceId = deviceId; }
-    public String getUserId() { return userId; }
-    public void setUserId(String userId) { this.userId = userId; }
+    public Long getOwnerId() { return ownerId; }
+    public void setOwnerId(Long ownerId) { this.ownerId = ownerId; }
     public String getDeviceType() { return deviceType; }
     public void setDeviceType(String deviceType) { this.deviceType = deviceType; }
     public String getOs() { return os; }

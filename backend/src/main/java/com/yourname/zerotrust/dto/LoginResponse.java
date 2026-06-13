@@ -11,6 +11,9 @@ public class LoginResponse {
     private int contextRisk;
     private int finalRisk;
     private boolean accessAllowed = true;
+    private boolean stepUpRequired;
+    private String stepUpLevel;
+    private java.util.List<String> riskReasons;
 
     // Getters and setters
     public String getAccessToken() { return accessToken; }
@@ -33,4 +36,10 @@ public class LoginResponse {
     public void setFinalRisk(int finalRisk) { this.finalRisk = finalRisk; }
     public boolean isAccessAllowed() { return accessAllowed; }
     public void setAccessAllowed(boolean accessAllowed) { this.accessAllowed = accessAllowed; }
+    public boolean isStepUpRequired() { return stepUpRequired; }
+    public void setStepUpRequired(boolean stepUpRequired) { this.stepUpRequired = stepUpRequired; }
+    public String getStepUpLevel() { return stepUpLevel; }
+    public void setStepUpLevel(String stepUpLevel) { this.stepUpLevel = stepUpLevel; }
+    public java.util.List<String> getRiskReasons() { return riskReasons; }
+    public void setRiskReasons(java.util.List<String> riskReasons) { this.riskReasons = riskReasons; }
 }

@@ -4,6 +4,8 @@ All endpoints are prefixed with `/api/`. Use JWT Bearer auth except where noted.
 
 **Swagger UI:** `/swagger-ui.html` | **OpenAPI JSON:** `/v3/api-docs`
 
+**Demo credentials (seeded on startup):** `admin` / `Admin123!` · `demo` / `Demo123!` · device `demo-laptop-01`
+
 ---
 
 ## Authentication APIs
@@ -27,7 +29,19 @@ All endpoints are prefixed with `/api/`. Use JWT Bearer auth except where noted.
 
 **Login response includes:** `accessToken`, `refreshToken`, `sessionId`, `userRisk`, `deviceRisk`, `contextRisk`, `finalRisk`, `accessAllowed`
 
-**HTTP status codes:** `401` invalid credentials | `403` policy/risk denied | `202` MFA required
+**HTTP status codes:** `401` invalid credentials | `403` policy/risk denied | `202` MFA required or `STEP_UP_REQUIRED`
+
+**Adaptive step-up thresholds:**
+
+| Risk | Action |
+|------|--------|
+| 0–39 (LOW) | Normal login |
+| 40–69 (MEDIUM) | `STEP_UP_REQUIRED` → complete via `POST /api/auth/step-up` |
+| 70+ (HIGH) | Access denied |
+
+| Method | Endpoint               | Auth     | Description                    |
+| ------ | ---------------------- | -------- | ------------------------------ |
+| POST   | /api/auth/step-up      | Public   | Complete step-up after 202     |
 
 ---
 
@@ -35,39 +49,57 @@ All endpoints are prefixed with `/api/`. Use JWT Bearer auth except where noted.
 
 | Method | Endpoint          | Auth  | Description              |
 | ------ | ----------------- | ----- | ------------------------ |
-| POST   | /api/users        | Bearer| Create user              |
-| GET    | /api/users        | Bearer| List users               |
-| POST   | /api/users/get    | Bearer| Get user by id in body   |
-| PUT    | /api/users        | Bearer| Update user              |
-| DELETE | /api/users        | Bearer| Delete user              |
-| POST   | /api/roles        | Bearer| Create role              |
-| GET    | /api/roles        | Bearer| List roles               |
-| PUT    | /api/roles        | Bearer| Update role              |
+| POST   | /api/users        | ADMIN | Create user              |
+| GET    | /api/users        | ADMIN | List users               |
+| POST   | /api/users/get    | ADMIN | Get user by id in body   |
+| PUT    | /api/users        | ADMIN | Update user              |
+| DELETE | /api/users        | ADMIN | Delete user              |
+| POST   | /api/roles        | ADMIN | Create role              |
+| GET    | /api/roles        | ADMIN | List roles               |
+| PUT    | /api/roles        | ADMIN | Update role              |
+| DELETE | /api/roles/{id}   | ADMIN | Delete role              |
 
 ---
 
 ## Device Trust APIs
 
-| Method | Endpoint                              | Auth   | Description           |
-| ------ | ------------------------------------- | ------ | --------------------- |
-| POST   | /api/devices/register                 | Bearer | Register device       |
-| GET    | /api/devices/{deviceId}               | Bearer | Device info           |
-| GET    | /api/devices/user/{userId}            | Bearer | List devices by user  |
-| POST   | /api/devices/evaluate?deviceId=       | Bearer | Re-evaluate trust     |
+| Method | Endpoint                              | Auth   | Description                    |
+| ------ | ------------------------------------- | ------ | ------------------------------ |
+| POST   | /api/devices/register                 | ADMIN  | Register device for ownerId    |
+| GET    | /api/devices/{deviceId}               | Bearer | Device info                    |
+| GET    | /api/devices/{deviceId}/trust-score   | Bearer | Current trust score (0–100)    |
+| GET    | /api/devices/user/{userId}            | Bearer | List devices by user           |
+| POST   | /api/devices/evaluate?deviceId=       | Bearer | Re-evaluate trust              |
+| PUT    | /api/devices/{deviceId}/update        | ADMIN  | Update device and recalc trust |
+
+**Register request:**
+```json
+{ "deviceId": "laptop-01", "ownerId": 2, "deviceType": "laptop", "os": "linux", "ipAddress": "192.168.1.10" }
+```
 
 ---
 
 ## Risk Engine APIs
 
-| Method | Endpoint                 | Auth   | Description           |
-| ------ | ------------------------ | ------ | --------------------- |
-| POST   | /api/risk/calculate      | Bearer | Calculate risk score  |
-| GET    | /api/risk/user/{id}      | Bearer | User risk history     |
-| GET    | /api/risk/session/{id}   | Bearer | Session risk details  |
+| Method | Endpoint                 | Auth   | Description                    |
+| ------ | ------------------------ | ------ | ------------------------------ |
+| POST   | /api/risk/calculate      | Bearer | Calculate risk score + reasons |
+| GET    | /api/risk/user/{id}      | Bearer | User risk history              |
+| GET    | /api/risk/session/{id}   | Bearer | Session risk details           |
 
 **Sample response:**
 ```json
-{ "userRisk": 35, "deviceRisk": 20, "contextRisk": 40, "finalRisk": 32 }
+{
+  "userRisk": 35,
+  "deviceRisk": 20,
+  "contextRisk": 40,
+  "finalRisk": 32,
+  "reasons": [
+    "MFA not enabled (+25 user risk)",
+    "Device trust score 85 → device risk 15",
+    "Final risk = weighted 30/40/30 → 32"
+  ]
+}
 ```
 
 ---
@@ -84,14 +116,28 @@ All endpoints are prefixed with `/api/`. Use JWT Bearer auth except where noted.
 
 ---
 
-## Monitoring & Logs APIs
+## Monitoring APIs
 
 | Method | Endpoint                 | Auth  | Description               |
 | ------ | ------------------------ | ----- | ------------------------- |
-| GET    | /api/logs                | ADMIN | Audit logs (?eventType, ?username) |
 | GET    | /api/sessions            | ADMIN | Active sessions           |
 | POST   | /api/anomaly/check       | ADMIN | Run anomaly detection     |
 | POST   | /api/session/terminate   | ADMIN | Kill suspicious session   |
+
+Stale ACTIVE sessions (>24h inactivity) are auto-terminated hourly.
+
+---
+
+## Audit Log APIs
+
+| Method | Endpoint                 | Auth  | Description                              |
+| ------ | ------------------------ | ----- | ---------------------------------------- |
+| GET    | /api/logs                | ADMIN | All audit logs                           |
+| GET    | /api/logs?severity=CRITICAL | ADMIN | Filter by INFO, WARN, or CRITICAL     |
+| GET    | /api/logs?eventType=POLICY_DENIED | ADMIN | Filter by event type            |
+| GET    | /api/logs?username=admin | ADMIN | Filter by username                       |
+
+**Key event types:** `POLICY_DENIED`, `ACCESS_DENIED`, `SESSION_TERMINATED`, `ATTACK_SIMULATED`, `ANOMALY_DETECTED`
 
 ---
 
@@ -106,7 +152,7 @@ All endpoints are prefixed with `/api/`. Use JWT Bearer auth except where noted.
 
 **Credential theft request:**
 ```json
-{ "username": "john", "stolenFromIp": "203.0.113.50", "attackerDeviceId": "unknown-device" }
+{ "username": "demo", "sourceIp": "203.0.113.50" }
 ```
 
 **Attack report response:**
@@ -122,7 +168,62 @@ All endpoints are prefixed with `/api/`. Use JWT Bearer auth except where noted.
 
 ---
 
-## Error format
+## Metrics APIs
+
+| Method | Endpoint                 | Auth   | Description                              |
+| ------ | ------------------------ | ------ | ---------------------------------------- |
+| GET    | /api/metrics/comparison  | Bearer | Traditional vs zero-trust side-by-side   |
+
+**Response shape:**
+```json
+{
+  "traditional": { "accessControl": "Static RBAC — binary allow/deny", "detectionRate": 0 },
+  "zeroTrust": { "policiesEnforced": 4, "activeSessions": 2, "averageRiskScore": 28.5, "detectionRate": 80.0 }
+}
+```
+
+---
+
+## Access Comparison APIs
+
+| Method | Endpoint                 | Auth   | Description                              |
+| ------ | ------------------------ | ------ | ---------------------------------------- |
+| POST   | /api/access/compare      | Bearer | Same request: traditional RBAC vs ZT     |
+
+**Request:** same body as `POST /api/policies/evaluate`
+
+**Sample response:**
+```json
+{
+  "traditional": { "model": "TRADITIONAL", "allowed": true, "reason": "Static RBAC: user has USER role — no risk check" },
+  "zeroTrust": { "model": "ZERO_TRUST", "allowed": false, "finalRisk": 52, "reason": "Risk score 52 exceeds threshold 30" },
+  "outcomesDiffer": true
+}
+```
+
+---
+
+## Incident Timeline APIs
+
+| Method | Endpoint                 | Auth  | Description                    |
+| ------ | ------------------------ | ----- | ------------------------------ |
+| GET    | /api/incidents           | ADMIN | List WARN/CRITICAL incidents   |
+| GET    | /api/incidents/{id}      | ADMIN | Full forensic timeline by ID   |
+
+Timeline includes correlated audit logs, session, risk score, and related attack simulation.
+
+---
+
+## Live Security Dashboard
+
+| Resource | URL | Auth |
+|----------|-----|------|
+| WebSocket feed | `ws://localhost:8080/ws/security` | Public (demo) |
+| HTML dashboard | `http://localhost:8080/dashboard.html` | Public |
+
+Events stream in real time from audit log writes (logins, denials, attacks, anomalies).
+
+---
 
 All errors return:
 ```json

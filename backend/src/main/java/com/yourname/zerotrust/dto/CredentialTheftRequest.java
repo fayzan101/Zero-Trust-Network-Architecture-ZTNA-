@@ -1,6 +1,9 @@
 package com.yourname.zerotrust.dto;
 
+import jakarta.validation.constraints.NotBlank;
+
 public class CredentialTheftRequest {
+    @NotBlank
     private String username;
     private String stolenFromIp;
     private String attackerDeviceId;

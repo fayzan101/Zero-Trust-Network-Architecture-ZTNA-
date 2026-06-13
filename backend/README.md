@@ -31,6 +31,30 @@ Swagger UI: `http://localhost:8082/swagger-ui.html`
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:5173,...` | Comma-separated frontend origins |
 | `SPRING_DATASOURCE_URL` | `jdbc:postgresql://localhost:5433/zerotrustdb` | Database URL |
 
+## Secrets & `.env`
+
+Copy `backend/.env.example` to `backend/.env` and fill in values locally. **Never commit `backend/.env`.**
+
+If credentials were pushed to GitHub (e.g. Neon alert):
+
+1. **Rotate immediately** in [Neon Console](https://console.neon.tech) → your project → **Reset password** / new connection string.
+2. Generate a new `JWT_SECRET` (e.g. `openssl rand -base64 48`) and update `backend/.env`.
+3. Ensure `.env` is untracked: `git rm --cached backend/.env` (already done locally if you followed the fix).
+4. **Purge git history** so the old file is not recoverable from past commits (see below).
+5. Restart the backend after updating `.env`.
+
+### Purge leaked `.env` from Git history
+
+The file may still exist in old commits on GitHub. After rotating credentials, remove it from history:
+
+```powershell
+# Install git-filter-repo if needed: pip install git-filter-repo
+git filter-repo --path backend/.env --invert-paths --force
+git push origin --force --all
+```
+
+Use force push only after confirming no teammates rely on the old history. Until history is purged, treat the leaked password as compromised even after rotation.
+
 ## API modules
 
 | Module | Base path | Auth |

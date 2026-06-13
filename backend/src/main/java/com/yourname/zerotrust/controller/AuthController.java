@@ -25,62 +25,92 @@ import com.yourname.zerotrust.dto.ProfileResponse;
 import com.yourname.zerotrust.dto.RefreshRequest;
 import com.yourname.zerotrust.dto.RegisterRequest;
 import com.yourname.zerotrust.dto.RegisterResponse;
+import com.yourname.zerotrust.dto.StepUpRequest;
 import com.yourname.zerotrust.service.AuthService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/auth")
+@Tag(name = "Authentication", description = "Register, login, MFA, tokens, and profile")
 public class AuthController {
     @Autowired
     private AuthService authService;
 
     @PostMapping("/register")
+    @Operation(summary = "Register a new user", description = "Creates a user with the given role. Public endpoint.")
+    @ApiResponse(responseCode = "201", description = "User created")
     public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest request) {
         return new ResponseEntity<>(authService.register(request), HttpStatus.CREATED);
     }
 
     @PostMapping("/login")
+    @Operation(summary = "Login", description = "Authenticates user, runs risk/policy checks. Returns 202 if MFA required, or STEP_UP_REQUIRED if risk is elevated (40–69).")
+    @ApiResponse(responseCode = "200", description = "Login successful")
+    @ApiResponse(responseCode = "202", description = "MFA verification required")
+    @ApiResponse(responseCode = "403", description = "Access denied by policy, risk, or step-up")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         LoginResponse response = authService.login(request);
         if ("MFA_REQUIRED".equals(response.getMessage())) {
             return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
         }
+        if ("STEP_UP_REQUIRED".equals(response.getMessage())) {
+            return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
+        }
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/step-up")
+    @Operation(summary = "Step-up authentication",
+            description = "Completes login after STEP_UP_REQUIRED challenge for medium-risk users without MFA.")
+    public ResponseEntity<LoginResponse> stepUp(@Valid @RequestBody StepUpRequest request) {
+        return ResponseEntity.ok(authService.stepUp(request));
+    }
+
     @PostMapping("/mfa")
+    @Operation(summary = "Verify MFA OTP", description = "Completes login after MFA challenge. Public endpoint.")
     public ResponseEntity<MfaResponse> verifyMfa(@Valid @RequestBody MfaRequest request) {
         return ResponseEntity.ok(authService.verifyMfa(request));
     }
 
     @PostMapping("/mfa/setup")
+    @Operation(summary = "Setup MFA", description = "Generates TOTP secret and QR URL for the authenticated user.")
     public ResponseEntity<MfaSetupResponse> setupMfa() {
         return ResponseEntity.ok(authService.setupMfa(currentUsername()));
     }
 
     @PostMapping("/mfa/enable")
+    @Operation(summary = "Enable MFA", description = "Confirms OTP and enables MFA on the authenticated account.")
     public ResponseEntity<GenericResponse> enableMfa(@Valid @RequestBody MfaEnableRequest request) {
         return ResponseEntity.ok(authService.enableMfa(currentUsername(), request));
     }
 
     @PostMapping("/mfa/disable")
+    @Operation(summary = "Disable MFA", description = "Disables MFA after password and OTP verification.")
     public ResponseEntity<GenericResponse> disableMfa(@Valid @RequestBody MfaDisableRequest request) {
         return ResponseEntity.ok(authService.disableMfa(currentUsername(), request));
     }
 
     @PostMapping("/logout")
+    @Operation(summary = "Logout", description = "Invalidates refresh token and terminates active sessions.")
     public ResponseEntity<GenericResponse> logout(@Valid @RequestBody LogoutRequest request) {
         return ResponseEntity.ok(authService.logout(request));
     }
 
     @PostMapping("/refresh")
+    @Operation(summary = "Refresh access token", description = "Issues a new access token using a valid refresh token. Public endpoint.")
     public ResponseEntity<LoginResponse> refresh(@Valid @RequestBody RefreshRequest request) {
         return ResponseEntity.ok(authService.refreshToken(request));
     }
 
     @GetMapping("/profile")
-    public ResponseEntity<ProfileResponse> profile(@RequestHeader("Authorization") String authHeader) {
+    @Operation(summary = "Get profile", description = "Returns the authenticated user's profile including MFA status.")
+    public ResponseEntity<ProfileResponse> profile(
+            @Parameter(description = "Bearer JWT access token") @RequestHeader("Authorization") String authHeader) {
         return ResponseEntity.ok(authService.getProfile(authHeader));
     }
 

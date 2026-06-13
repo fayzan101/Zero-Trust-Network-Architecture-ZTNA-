@@ -1,6 +1,9 @@
 package com.yourname.zerotrust.dto;
 
+import jakarta.validation.constraints.NotBlank;
+
 public class PolicyRequest {
+    @NotBlank
     private String name;
     private String description;
     private String resource;

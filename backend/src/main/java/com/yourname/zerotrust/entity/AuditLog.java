@@ -32,6 +32,8 @@ public class AuditLog {
     @Column(nullable = false)
     private String severity;
 
+    private String correlationId;
+
     private LocalDateTime createdAt;
 
     @PrePersist
@@ -53,6 +55,8 @@ public class AuditLog {
     public void setDetails(String details) { this.details = details; }
     public String getSeverity() { return severity; }
     public void setSeverity(String severity) { this.severity = severity; }
+    public String getCorrelationId() { return correlationId; }
+    public void setCorrelationId(String correlationId) { this.correlationId = correlationId; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

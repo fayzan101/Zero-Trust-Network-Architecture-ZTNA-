@@ -12,7 +12,6 @@
 # Node
 /node_modules
 /dist
-/.env
 
 # Logs
 *.log
@@ -23,3 +22,10 @@ Thumbs.db
 
 # Docker
 **/db_data
+
+# Secrets — never commit environment files
+.env
+**/.env
+backend/.env
+frontend/.env
+!**/.env.example

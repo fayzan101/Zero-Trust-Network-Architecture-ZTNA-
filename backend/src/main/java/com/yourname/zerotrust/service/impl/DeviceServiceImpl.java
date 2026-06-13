@@ -1,12 +1,18 @@
 package com.yourname.zerotrust.service.impl;
 
-import com.yourname.zerotrust.dto.DeviceRegisterRequest;
-import com.yourname.zerotrust.dto.DeviceResponse;
-import com.yourname.zerotrust.entity.Device;
-import com.yourname.zerotrust.repository.DeviceRepository;
-import com.yourname.zerotrust.service.DeviceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import com.yourname.zerotrust.dto.DeviceRegisterRequest;
+import com.yourname.zerotrust.dto.DeviceResponse;
+import com.yourname.zerotrust.dto.DeviceTrustScoreResponse;
+import com.yourname.zerotrust.dto.DeviceUpdateRequest;
+import com.yourname.zerotrust.entity.Device;
+import com.yourname.zerotrust.entity.User;
+import com.yourname.zerotrust.exception.ResourceNotFoundException;
+import com.yourname.zerotrust.repository.DeviceRepository;
+import com.yourname.zerotrust.repository.UserRepository;
+import com.yourname.zerotrust.service.DeviceService;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -17,11 +23,17 @@ public class DeviceServiceImpl implements DeviceService {
     @Autowired
     private DeviceRepository deviceRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
     @Override
     public DeviceResponse registerDevice(DeviceRegisterRequest request) {
+        User owner = userRepository.findById(request.getOwnerId())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
         Device device = new Device();
         device.setDeviceId(request.getDeviceId());
-        device.setUserId(request.getUserId());
+        device.setOwner(owner);
         device.setDeviceType(request.getDeviceType());
         device.setOs(request.getOs());
         device.setIpAddress(request.getIpAddress());
@@ -39,7 +51,8 @@ public class DeviceServiceImpl implements DeviceService {
 
     @Override
     public List<DeviceResponse> getDevicesByUserId(String userId) {
-        return deviceRepository.findByUserId(userId)
+        Long ownerId = Long.parseLong(userId);
+        return deviceRepository.findByOwner_Id(ownerId)
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
@@ -53,13 +66,39 @@ public class DeviceServiceImpl implements DeviceService {
         return score;
     }
 
+    @Override
+    public DeviceTrustScoreResponse getTrustScore(String deviceId) {
+        Device device = deviceRepository.findByDeviceId(deviceId);
+        if (device == null) {
+            throw new ResourceNotFoundException("Device not found: " + deviceId);
+        }
+        return new DeviceTrustScoreResponse(device.getDeviceId(), device.getTrustScore());
+    }
+
+    @Override
+    public DeviceResponse updateDevice(String deviceId, DeviceUpdateRequest request) {
+        Device device = deviceRepository.findByDeviceId(deviceId);
+        if (device == null) {
+            throw new ResourceNotFoundException("Device not found: " + deviceId);
+        }
+
+        if (request.getDeviceType() != null) {
+            device.setDeviceType(request.getDeviceType());
+        }
+        if (request.getOs() != null) {
+            device.setOs(request.getOs());
+        }
+        device.setIpAddress(request.getIpAddress());
+        device.setTrustScore(evaluateTrustScoreInternal(device));
+        device = deviceRepository.save(device);
+        return toResponse(device);
+    }
+
     private int evaluateTrustScoreInternal(Device device) {
-        // Simple example: score based on device type and OS
         int score = 50;
         if (device.getDeviceType().equalsIgnoreCase("laptop")) score += 20;
         if (device.getOs().toLowerCase().contains("windows")) score += 10;
         if (device.getOs().toLowerCase().contains("linux")) score += 15;
-        // Add more logic as needed
         return Math.min(score, 100);
     }
 
@@ -67,7 +106,7 @@ public class DeviceServiceImpl implements DeviceService {
         DeviceResponse resp = new DeviceResponse();
         resp.setId(device.getId());
         resp.setDeviceId(device.getDeviceId());
-        resp.setUserId(device.getUserId());
+        resp.setUserId(device.getOwner().getId().toString());
         resp.setDeviceType(device.getDeviceType());
         resp.setOs(device.getOs());
         resp.setIpAddress(device.getIpAddress());
