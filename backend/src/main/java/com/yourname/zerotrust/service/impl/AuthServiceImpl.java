@@ -15,15 +15,23 @@ import com.yourname.zerotrust.dto.LoginResponse;
 import com.yourname.zerotrust.dto.LogoutRequest;
 import com.yourname.zerotrust.dto.MfaRequest;
 import com.yourname.zerotrust.dto.MfaResponse;
+import com.yourname.zerotrust.dto.PolicyEvaluateRequest;
+import com.yourname.zerotrust.dto.PolicyEvaluateResponse;
 import com.yourname.zerotrust.dto.ProfileResponse;
 import com.yourname.zerotrust.dto.RefreshRequest;
 import com.yourname.zerotrust.dto.RegisterRequest;
 import com.yourname.zerotrust.dto.RegisterResponse;
+import com.yourname.zerotrust.dto.RiskCalculateRequest;
+import com.yourname.zerotrust.dto.RiskScoreResponse;
+import com.yourname.zerotrust.dto.SessionResponse;
 import com.yourname.zerotrust.entity.Role;
 import com.yourname.zerotrust.entity.User;
+import com.yourname.zerotrust.policy.PolicyEvaluator;
 import com.yourname.zerotrust.repository.RoleRepository;
 import com.yourname.zerotrust.repository.UserRepository;
 import com.yourname.zerotrust.service.AuthService;
+import com.yourname.zerotrust.service.RiskService;
+import com.yourname.zerotrust.service.SessionService;
 import com.yourname.zerotrust.util.JwtUtil;
 
 @Service
@@ -40,30 +48,35 @@ public class AuthServiceImpl implements AuthService {
     @Autowired
     private JwtUtil jwtUtil;
 
+    @Autowired
+    private RiskService riskService;
+
+    @Autowired
+    private PolicyEvaluator policyEvaluator;
+
+    @Autowired
+    private SessionService sessionService;
+
     @Override
     public RegisterResponse register(RegisterRequest request) {
         RegisterResponse response = new RegisterResponse();
 
-        // Check if username already exists
         if (userRepository.existsByUsername(request.getUsername())) {
             response.setMessage("Username already exists");
             return response;
         }
 
-        // Check if email already exists
         if (userRepository.existsByEmail(request.getEmail())) {
             response.setMessage("Email already exists");
             return response;
         }
 
-        // Create new user
         User user = new User();
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setMfaEnabled(false);
 
-        // Assign role (default to USER if not specified)
         String roleName = request.getRole() != null ? request.getRole() : "USER";
         Role role = roleRepository.findByName(roleName).orElse(null);
         if (role != null) {
@@ -72,10 +85,8 @@ public class AuthServiceImpl implements AuthService {
             user.setRoles(roles);
         }
 
-        // Save user
         User savedUser = userRepository.save(user);
 
-        // Build response
         response.setId(savedUser.getId());
         response.setUsername(savedUser.getUsername());
         response.setEmail(savedUser.getEmail());
@@ -89,84 +100,117 @@ public class AuthServiceImpl implements AuthService {
     public LoginResponse login(LoginRequest request) {
         LoginResponse response = new LoginResponse();
 
-        // Find user by username
         User user = userRepository.findByUsername(request.getUsername()).orElse(null);
         if (user == null) {
             response.setMessage("Invalid username or password");
+            response.setAccessAllowed(false);
             return response;
         }
 
-        // Validate password
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             response.setMessage("Invalid username or password");
+            response.setAccessAllowed(false);
             return response;
         }
 
-        // Check if MFA is enabled
         if (user.isMfaEnabled()) {
             response.setMessage("MFA_REQUIRED");
             return response;
         }
 
-        // Generate tokens
-        String accessToken = jwtUtil.generateAccessToken(user.getUsername());
-        String refreshToken = jwtUtil.generateRefreshToken(user.getUsername());
-
-        // Save refresh token to database
-        user.setRefreshToken(refreshToken);
-        user.setLastLogin(LocalDateTime.now());
-        userRepository.save(user);
-
-        // Build response
-        response.setAccessToken(accessToken);
-        response.setRefreshToken(refreshToken);
-        response.setExpiresIn(jwtUtil.getAccessTokenExpirySeconds());
-        response.setMessage("Login successful");
-
-        return response;
+        return completeAuthenticatedLogin(user, request.getDeviceId(), request.getIpAddress());
     }
 
     @Override
     public MfaResponse verifyMfa(MfaRequest request) {
         MfaResponse response = new MfaResponse();
 
-        // Find user by username
         User user = userRepository.findByUsername(request.getUsername()).orElse(null);
         if (user == null) {
             response.setMessage("User not found");
             return response;
         }
 
-        // Simple OTP validation (in production, use TOTP library like GoogleAuthenticator)
-        // For demo purposes, accept "123456" as valid OTP
         if (!"123456".equals(request.getOtp())) {
             response.setMessage("Invalid OTP");
             return response;
         }
 
-        // Generate tokens
+        LoginResponse loginResult = completeAuthenticatedLogin(
+                user, request.getDeviceId(), request.getIpAddress());
+
+        if (!loginResult.isAccessAllowed()) {
+            response.setMessage(loginResult.getMessage());
+            return response;
+        }
+
+        response.setAccessToken(loginResult.getAccessToken());
+        response.setRefreshToken(loginResult.getRefreshToken());
+        response.setExpiresIn(loginResult.getExpiresIn());
+        response.setMessage("MFA verification successful");
+
+        return response;
+    }
+
+    private LoginResponse completeAuthenticatedLogin(User user, String deviceId, String ipAddress) {
+        LoginResponse response = new LoginResponse();
+
+        RiskCalculateRequest riskRequest = new RiskCalculateRequest();
+        riskRequest.setUserId(user.getId());
+        riskRequest.setDeviceId(deviceId);
+        riskRequest.setIpAddress(ipAddress);
+        RiskScoreResponse risk = riskService.calculateRisk(riskRequest);
+
+        PolicyEvaluateRequest policyRequest = new PolicyEvaluateRequest();
+        policyRequest.setUserId(user.getId());
+        policyRequest.setResource("login");
+        policyRequest.setAction("access");
+        policyRequest.setDeviceId(deviceId);
+        policyRequest.setIpAddress(ipAddress);
+        PolicyEvaluateResponse policyResult = policyEvaluator.evaluate(policyRequest);
+
+        response.setUserRisk(risk.getUserRisk());
+        response.setDeviceRisk(risk.getDeviceRisk());
+        response.setContextRisk(risk.getContextRisk());
+        response.setFinalRisk(risk.getFinalRisk());
+
+        if (!policyResult.isAllowed()) {
+            response.setMessage("ACCESS_DENIED: " + policyResult.getReason());
+            response.setAccessAllowed(false);
+            return response;
+        }
+
+        SessionResponse session = sessionService.createSession(user, deviceId, ipAddress, risk);
+
+        RiskCalculateRequest sessionRiskRequest = new RiskCalculateRequest();
+        sessionRiskRequest.setUserId(user.getId());
+        sessionRiskRequest.setDeviceId(deviceId);
+        sessionRiskRequest.setIpAddress(ipAddress);
+        sessionRiskRequest.setSessionId(session.getSessionId());
+        riskService.calculateRisk(sessionRiskRequest);
+
         String accessToken = jwtUtil.generateAccessToken(user.getUsername());
         String refreshToken = jwtUtil.generateRefreshToken(user.getUsername());
 
-        // Save refresh token to database
         user.setRefreshToken(refreshToken);
         user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
 
-        // Build response
         response.setAccessToken(accessToken);
         response.setRefreshToken(refreshToken);
         response.setExpiresIn(jwtUtil.getAccessTokenExpirySeconds());
-        response.setMessage("MFA verification successful");
+        response.setSessionId(session.getSessionId());
+        response.setMessage("Login successful");
+        response.setAccessAllowed(true);
 
         return response;
     }
 
     @Override
     public GenericResponse logout(LogoutRequest request) {
-        // Find user by refresh token and invalidate it
         User user = userRepository.findByRefreshToken(request.getRefreshToken()).orElse(null);
         if (user != null) {
+            sessionService.terminateSessionsForUser(user.getId(), "User logout");
             user.setRefreshToken(null);
             userRepository.save(user);
         }
@@ -178,28 +222,23 @@ public class AuthServiceImpl implements AuthService {
     public LoginResponse refreshToken(RefreshRequest request) {
         LoginResponse response = new LoginResponse();
 
-        // Validate refresh token
         if (!jwtUtil.validateToken(request.getRefreshToken())) {
             response.setMessage("Invalid or expired refresh token");
             return response;
         }
 
-        // Find user by refresh token
         User user = userRepository.findByRefreshToken(request.getRefreshToken()).orElse(null);
         if (user == null) {
             response.setMessage("Refresh token not found");
             return response;
         }
 
-        // Generate new access token
         String accessToken = jwtUtil.generateAccessToken(user.getUsername());
         String newRefreshToken = jwtUtil.generateRefreshToken(user.getUsername());
 
-        // Update refresh token in database
         user.setRefreshToken(newRefreshToken);
         userRepository.save(user);
 
-        // Build response
         response.setAccessToken(accessToken);
         response.setRefreshToken(newRefreshToken);
         response.setExpiresIn(jwtUtil.getAccessTokenExpirySeconds());
@@ -212,28 +251,23 @@ public class AuthServiceImpl implements AuthService {
     public ProfileResponse getProfile(String authHeader) {
         ProfileResponse response = new ProfileResponse();
 
-        // Extract token from Authorization header
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return response;
         }
 
         String token = authHeader.substring(7);
 
-        // Validate token
         if (!jwtUtil.validateToken(token)) {
             return response;
         }
 
-        // Extract username from token
         String username = jwtUtil.extractUsername(token);
 
-        // Find user
         User user = userRepository.findByUsername(username).orElse(null);
         if (user == null) {
             return response;
         }
 
-        // Build response
         response.setId(user.getId());
         response.setUsername(user.getUsername());
         response.setEmail(user.getEmail());
