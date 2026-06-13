@@ -1,5 +1,6 @@
 package com.yourname.zerotrust.repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,4 +12,6 @@ public interface AttackRepository extends JpaRepository<Attack, Long> {
     List<Attack> findByAttackTypeOrderBySimulatedAtDesc(String attackType);
     long countByDetectedTrue();
     long countByDetectedFalse();
+    List<Attack> findByTargetUserIdAndSimulatedAtBetweenOrderBySimulatedAtDesc(
+            Long targetUserId, LocalDateTime from, LocalDateTime to);
 }

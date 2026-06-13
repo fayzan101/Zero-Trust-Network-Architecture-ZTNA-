@@ -1,5 +1,6 @@
 package com.yourname.zerotrust.support;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -31,10 +32,15 @@ public final class TestDataFactory {
         user.setEmail(username + "@test.com");
         user.setPassword(new BCryptPasswordEncoder().encode("password123"));
         user.setMfaEnabled(false);
+        user.setCreatedAt(LocalDateTime.now().minusDays(30));
+        user.setLastLogin(LocalDateTime.now().minusDays(1));
         HashSet<Role> roles = new HashSet<>();
         roles.add(role);
         user.setRoles(roles);
-        return userRepository.save(user);
+        User saved = userRepository.save(user);
+        saved.setCreatedAt(LocalDateTime.now().minusDays(30));
+        saved.setLastLogin(LocalDateTime.now().minusDays(1));
+        return userRepository.save(saved);
     }
 
     public static Policy createPolicy(PolicyRepository policyRepository, String name,

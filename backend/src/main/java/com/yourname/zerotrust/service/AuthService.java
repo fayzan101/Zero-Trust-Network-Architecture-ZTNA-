@@ -5,6 +5,7 @@ import com.yourname.zerotrust.dto.*;
 public interface AuthService {
     RegisterResponse register(RegisterRequest request);
     LoginResponse login(LoginRequest request);
+    LoginResponse stepUp(StepUpRequest request);
     MfaResponse verifyMfa(MfaRequest request);
     MfaSetupResponse setupMfa(String username);
     GenericResponse enableMfa(String username, MfaEnableRequest request);

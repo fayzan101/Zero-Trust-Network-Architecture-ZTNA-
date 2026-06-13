@@ -25,6 +25,7 @@ import com.yourname.zerotrust.dto.ProfileResponse;
 import com.yourname.zerotrust.dto.RefreshRequest;
 import com.yourname.zerotrust.dto.RegisterRequest;
 import com.yourname.zerotrust.dto.RegisterResponse;
+import com.yourname.zerotrust.dto.StepUpRequest;
 import com.yourname.zerotrust.service.AuthService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -48,16 +49,26 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    @Operation(summary = "Login", description = "Authenticates user, runs risk/policy checks, and creates a session. Returns 202 if MFA is required.")
+    @Operation(summary = "Login", description = "Authenticates user, runs risk/policy checks. Returns 202 if MFA required, or STEP_UP_REQUIRED if risk is elevated (40–69).")
     @ApiResponse(responseCode = "200", description = "Login successful")
     @ApiResponse(responseCode = "202", description = "MFA verification required")
-    @ApiResponse(responseCode = "403", description = "Access denied by policy or risk threshold")
+    @ApiResponse(responseCode = "403", description = "Access denied by policy, risk, or step-up")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         LoginResponse response = authService.login(request);
         if ("MFA_REQUIRED".equals(response.getMessage())) {
             return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
         }
+        if ("STEP_UP_REQUIRED".equals(response.getMessage())) {
+            return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
+        }
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/step-up")
+    @Operation(summary = "Step-up authentication",
+            description = "Completes login after STEP_UP_REQUIRED challenge for medium-risk users without MFA.")
+    public ResponseEntity<LoginResponse> stepUp(@Valid @RequestBody StepUpRequest request) {
+        return ResponseEntity.ok(authService.stepUp(request));
     }
 
     @PostMapping("/mfa")

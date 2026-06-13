@@ -42,7 +42,9 @@ public class OpenApiConfig {
                         new Tag().name("Monitoring").description("Sessions and anomaly detection (admin)"),
                         new Tag().name("Attack Simulation").description("Attack simulators (admin)"),
                         new Tag().name("Audit Logs").description("Security audit trail (admin)"),
-                        new Tag().name("Metrics").description("Traditional vs zero-trust comparison")))
+                        new Tag().name("Metrics").description("Traditional vs zero-trust comparison"),
+                        new Tag().name("Access Comparison").description("Per-request RBAC vs zero-trust"),
+                        new Tag().name("Incidents").description("Incident timeline and forensic replay")))
                 .addSecurityItem(new SecurityRequirement().addList("Bearer"))
                 .components(new Components().addSecuritySchemes("Bearer",
                         new SecurityScheme()

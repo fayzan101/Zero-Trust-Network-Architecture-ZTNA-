@@ -29,7 +29,19 @@ All endpoints are prefixed with `/api/`. Use JWT Bearer auth except where noted.
 
 **Login response includes:** `accessToken`, `refreshToken`, `sessionId`, `userRisk`, `deviceRisk`, `contextRisk`, `finalRisk`, `accessAllowed`
 
-**HTTP status codes:** `401` invalid credentials | `403` policy/risk denied | `202` MFA required
+**HTTP status codes:** `401` invalid credentials | `403` policy/risk denied | `202` MFA required or `STEP_UP_REQUIRED`
+
+**Adaptive step-up thresholds:**
+
+| Risk | Action |
+|------|--------|
+| 0–39 (LOW) | Normal login |
+| 40–69 (MEDIUM) | `STEP_UP_REQUIRED` → complete via `POST /api/auth/step-up` |
+| 70+ (HIGH) | Access denied |
+
+| Method | Endpoint               | Auth     | Description                    |
+| ------ | ---------------------- | -------- | ------------------------------ |
+| POST   | /api/auth/step-up      | Public   | Complete step-up after 202     |
 
 ---
 
@@ -172,7 +184,46 @@ Stale ACTIVE sessions (>24h inactivity) are auto-terminated hourly.
 
 ---
 
-## Error format
+## Access Comparison APIs
+
+| Method | Endpoint                 | Auth   | Description                              |
+| ------ | ------------------------ | ------ | ---------------------------------------- |
+| POST   | /api/access/compare      | Bearer | Same request: traditional RBAC vs ZT     |
+
+**Request:** same body as `POST /api/policies/evaluate`
+
+**Sample response:**
+```json
+{
+  "traditional": { "model": "TRADITIONAL", "allowed": true, "reason": "Static RBAC: user has USER role — no risk check" },
+  "zeroTrust": { "model": "ZERO_TRUST", "allowed": false, "finalRisk": 52, "reason": "Risk score 52 exceeds threshold 30" },
+  "outcomesDiffer": true
+}
+```
+
+---
+
+## Incident Timeline APIs
+
+| Method | Endpoint                 | Auth  | Description                    |
+| ------ | ------------------------ | ----- | ------------------------------ |
+| GET    | /api/incidents           | ADMIN | List WARN/CRITICAL incidents   |
+| GET    | /api/incidents/{id}      | ADMIN | Full forensic timeline by ID   |
+
+Timeline includes correlated audit logs, session, risk score, and related attack simulation.
+
+---
+
+## Live Security Dashboard
+
+| Resource | URL | Auth |
+|----------|-----|------|
+| WebSocket feed | `ws://localhost:8080/ws/security` | Public (demo) |
+| HTML dashboard | `http://localhost:8080/dashboard.html` | Public |
+
+Events stream in real time from audit log writes (logins, denials, attacks, anomalies).
+
+---
 
 All errors return:
 ```json
